@@ -18,7 +18,7 @@ import pandas as pd
 
 
 #Import data
-data = pd.read_csv("../data/heart_2020_cleaned.csv")
+data = pd.read_csv("./data/heart_2020_cleaned.csv")
 
 #Inspect the data
 print(data.head())
