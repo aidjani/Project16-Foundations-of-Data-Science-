@@ -83,13 +83,13 @@ for i in range (len(num_cols)):
     axs[row, col].set_ylabel('Count')
     axs[row, col].set_title(col_name + ' Distribution')
 #maybe rename the columns so that it is Mental Health and not MentalHealth
-plt.savefig('../output/numerical_distributions.jpg')
+plt.savefig('./output/numerical_distributions.jpg')
 plt.tight_layout()
 plt.show()
 
 #age is definitely not normally distributed
 fig_age= sns.countplot(data, x = "AgeCategory", order = age_categories, hue='HeartDisease', dodge = False)
-plt.savefig('../output/age_distribution.jpg')
+plt.savefig('./output/age_distribution.jpg')
 plt.tight_layout()
 plt.show()
 
