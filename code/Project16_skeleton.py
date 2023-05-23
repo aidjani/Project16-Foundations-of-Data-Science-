@@ -87,12 +87,14 @@ plt.savefig('./output/numerical_distributions.jpg')
 plt.tight_layout()
 plt.show()
 
+#put this part in the bar plot visualization want to keep here too tho?
+''''
 #age is definitely not normally distributed
 fig_age= sns.countplot(data, x = "AgeCategory", order = age_categories, hue='HeartDisease', dodge = False)
-plt.savefig('./output/age_distribution.jpg')
+plt.savefig('../output/age_distribution.jpg')
 plt.tight_layout()
 plt.show()
-
+'''
 
 #categorical data
 print("*******************Categorical Data*******************")
@@ -108,6 +110,102 @@ data_encoded = pd.get_dummies(data, columns=cat_cols, drop_first=True)
 print(data_encoded.head())
 
 
+#Visualization of data balance: Bar plot (categorical data) 
+fig_race = sns.countplot(data=data, x="Race", hue='HeartDisease', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.savefig('../output/race_distribution.jpg')
+plt.show()
+
+fig_diabetic = sns.countplot(data=data, x="Diabetic", hue='HeartDisease', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.savefig('../output/diabetic_distribution.jpg')
+plt.show()
+
+fig_genhealth = sns.countplot(data=data, x="GenHealth", hue='HeartDisease', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.savefig('../output/genhealth_distribution.jpg')
+plt.show()
+
+fig_age= sns.countplot(data, x = "AgeCategory", order = age_categories, hue='HeartDisease', dodge = False) #definetely not normally distributed 
+plt.xticks(rotation=45, ha = "right")
+plt.savefig('../output/age_distribution.jpg')
+plt.tight_layout()
+plt.show()
+
+''' #Tried to get all in one, but colours are off
+for i, cat_var in enumerate(categorical_variables):
+    ax = axes[i]  # Define the ax variable here
+
+    # Calculate value counts for the current categorical variable
+    category_counts = data[cat_var].value_counts()
+
+    # Plot the bars for each category with different colors based on 'HeartDisease'
+    bars = ax.bar(category_counts.index, category_counts.values, color=[heart_disease_colors.get(x, 'gray') for x in category_counts.index])
+
+    ax.set_xlabel('Categories')
+    ax.set_ylabel('Count')
+    ax.set_title(f'Balance of {cat_var}')
+    ax.tick_params(axis='x', labelrotation=45, labelsize=8)
+    ax.margins(y=0.2)
+
+plt.subplots_adjust(hspace=subplot_spacing, top=0.9)
+plt.savefig('../output/balance_visualization.jpg')
+plt.tight_layout()
+plt.show()
+'''
+#Pearson and Spearman correlation between (HeartDisease, BMI) 
+   #! now HeartDisease currently string and not numerical values so doesnt work yet 
+''''
+plt.figure()
+scat = sns.scatterplot(x="HeartDisease", y="BMI", data=data)
+scat.set_xlabel("Heart Disease (Yes/No)")
+scat.set_ylabel("BMI")
+scat.set_title("Heart Disease and BMI")
+scat.text(
+    x=1.5,
+    y=30,
+    s=r"Pearson's $\rho=$"
+    + f"{sts.pearsonr(data['HeartDisease'], data['BMI']).correlation:.3f}",
+    horizontalalignment="right",
+)
+scat.text(
+    x=1.5,
+    y=27,
+    s=r"Spearman's $r=$"
+    + f"{sts.spearmanr(data['HeartDisease'], data['BMI']).correlation:.3f}",
+    horizontalalignment="right",
+)
+plt.savefig("../output/correlation-heartdisease-bmi.jpg")
+plt.tight_layout()
+plt.show()
+print("Correlation between Heart Disease and BMI:")
+print(
+    f"\t Pearson:  {sts.pearsonr(data['HeartDisease'], data['BMI']).correlation:.3f}"
+    + f" | p={sts.pearsonr(data['HeartDisease'], data['BMI']).pvalue:.10f}"
+)
+print(
+    f"\t Spearman: {sts.spearmanr(data['HeartDisease'], data['BMI']).correlation:.3f}"
+    + f" | p={sts.spearmanr(data['HeartDisease'], data['BMI']).pvalue:.10f}"
+)
+'''
+
+
+#Heat Map 
+# Calculate correlation matrix
+corr_matrix = data_encoded.corr() #square matrix that shows the pairwise correlations between different variables( strength and direction of the linear relationship between variables)
+
+# Create a heatmap
+plt.figure(figsize=(12, 10))
+sns.heatmap(corr_matrix, annot=False, cmap='coolwarm', vmin=-0.5, vmax=0.5)
+plt.title('Correlation Heatmap')
+plt.xticks(rotation=45, ha = "right")
+
+# Save the heatmap
+plt.savefig('../output/correlation_heatmap.jpg')
+plt.tight_layout()
+plt.show()
+
+#Loose ends 
 '''for col in cat_cols:    
     print("Categories in ", col, ": ", data[col].unique()) #how many categories can the categorical variable take?
     if col == "Sex":
