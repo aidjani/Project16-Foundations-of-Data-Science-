@@ -153,11 +153,18 @@ plt.savefig('../output/balance_visualization.jpg')
 plt.tight_layout()
 plt.show()
 '''
-#Pearson and Spearman correlation between (HeartDisease, BMI) 
-   #! now HeartDisease currently string and not numerical values so doesnt work yet 
-''''
+#Pearson and Spearman correlations
+print("*******************Pearson and Spearman correlations*******************")
+#Pearson and Spearman correlation between (HeartDisease, BMI)  
+data_encoded_corr = pd.get_dummies(data, columns=cat_cols)
+data_encoded_corr['HeartDisease'] = data_encoded_corr['HeartDisease'].map({'No': 0, 'Yes': 1})
+data_encoded_corr['BMI'] = pd.to_numeric(data_encoded_corr['BMI'])
+
+
+print(data_encoded_corr.head())
+
 plt.figure()
-scat = sns.scatterplot(x="HeartDisease", y="BMI", data=data)
+scat = sns.scatterplot(x="HeartDisease", y="BMI", data=data_encoded_corr)
 scat.set_xlabel("Heart Disease (Yes/No)")
 scat.set_ylabel("BMI")
 scat.set_title("Heart Disease and BMI")
@@ -165,14 +172,14 @@ scat.text(
     x=1.5,
     y=30,
     s=r"Pearson's $\rho=$"
-    + f"{sts.pearsonr(data['HeartDisease'], data['BMI']).correlation:.3f}",
+    + f"{sts.pearsonr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI'])[0]:.3f}",
     horizontalalignment="right",
 )
 scat.text(
     x=1.5,
     y=27,
     s=r"Spearman's $r=$"
-    + f"{sts.spearmanr(data['HeartDisease'], data['BMI']).correlation:.3f}",
+    + f"{sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI']).correlation:.3f}",
     horizontalalignment="right",
 )
 plt.savefig("../output/correlation-heartdisease-bmi.jpg")
@@ -180,30 +187,46 @@ plt.tight_layout()
 plt.show()
 print("Correlation between Heart Disease and BMI:")
 print(
-    f"\t Pearson:  {sts.pearsonr(data['HeartDisease'], data['BMI']).correlation:.3f}"
-    + f" | p={sts.pearsonr(data['HeartDisease'], data['BMI']).pvalue:.10f}"
+    f"\t Pearson:  {sts.pearsonr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI'])[0]:.3f}"
+    + f" | p={sts.pearsonr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI'])[1]:.10f}"
 )
 print(
-    f"\t Spearman: {sts.spearmanr(data['HeartDisease'], data['BMI']).correlation:.3f}"
-    + f" | p={sts.spearmanr(data['HeartDisease'], data['BMI']).pvalue:.10f}"
+    f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI']).correlation:.3f}"
+    + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI']).pvalue:.10f}"
 )
-'''
 
 
-#Heat Map 
-# Calculate correlation matrix
-corr_matrix = data_encoded.corr() #square matrix that shows the pairwise correlations between different variables( strength and direction of the linear relationship between variables)
+##Heatmap 
+#cat_vars = ['HeartDisease', 'AgeCategory', 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth']
+cat_vars = ['HeartDisease', 'AgeCategory', 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth', 'BMI', 'Smoking', 'AlcoholDrinking', 'Stroke', 'PhysicalHealth', 'MentalHealth', 'DiffWalking', 'Sex', 'AgeCategory', 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth', 'SleepTime', 'Asthma', 'KidneyDisease', 'SkinCancer']
+# Create a contingency table for each pair of categorical variables
+contingency_table = pd.DataFrame(index=cat_vars, columns=cat_vars)
 
-# Create a heatmap
-plt.figure(figsize=(12, 10))
-sns.heatmap(corr_matrix, annot=False, cmap='coolwarm', vmin=-0.5, vmax=0.5)
-plt.title('Correlation Heatmap')
-plt.xticks(rotation=45, ha = "right")
+for var1 in cat_vars:
+    for var2 in cat_vars:
+        # Create a cross-tabulation between the variables
+        cross_tab = pd.crosstab(data[var1], data[var2])
+        
+        # Perform chi-square test and extract the chi-square statistic
+        chi2, _, _, _ = chi2_contingency(cross_tab)
+        
+        # Calculate Cramér's V statistic
+        n = cross_tab.sum().sum()
+        cramers_v = np.sqrt(chi2 / (n * min(cross_tab.shape) - 1))
+        
+        # Assign the Cramér's V value to the contingency table
+        contingency_table.loc[var1, var2] = cramers_v
 
-# Save the heatmap
-plt.savefig('../output/correlation_heatmap.jpg')
+# Create a heatmap for the contingency table
+plt.figure(figsize=(10, 8))
+sns.heatmap(contingency_table.astype(float), annot=False, cmap='coolwarm', fmt='.2f',vmin=0, vmax=0.2 )
+plt.title("Categorical Variables Heatmap (Cramér's V)")
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0) 
 plt.tight_layout()
+plt.savefig('../output/categorical_heatmap.jpg', dpi=300)
 plt.show()
+
 
 #Loose ends 
 '''for col in cat_cols:    
