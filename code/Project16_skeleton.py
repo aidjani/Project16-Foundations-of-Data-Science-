@@ -153,38 +153,15 @@ plt.savefig('../output/balance_visualization.jpg')
 plt.tight_layout()
 plt.show()
 '''
-#Pearson and Spearman correlations
+##Pearson and Spearman correlations
 print("*******************Pearson and Spearman correlations*******************")
 #Pearson and Spearman correlation between (HeartDisease, BMI)  
 data_encoded_corr = pd.get_dummies(data, columns=cat_cols)
 data_encoded_corr['HeartDisease'] = data_encoded_corr['HeartDisease'].map({'No': 0, 'Yes': 1})
 data_encoded_corr['BMI'] = pd.to_numeric(data_encoded_corr['BMI'])
 
-
 print(data_encoded_corr.head())
 
-plt.figure()
-scat = sns.scatterplot(x="HeartDisease", y="BMI", data=data_encoded_corr)
-scat.set_xlabel("Heart Disease (Yes/No)")
-scat.set_ylabel("BMI")
-scat.set_title("Heart Disease and BMI")
-scat.text(
-    x=1.5,
-    y=30,
-    s=r"Pearson's $\rho=$"
-    + f"{sts.pearsonr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI'])[0]:.3f}",
-    horizontalalignment="right",
-)
-scat.text(
-    x=1.5,
-    y=27,
-    s=r"Spearman's $r=$"
-    + f"{sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI']).correlation:.3f}",
-    horizontalalignment="right",
-)
-plt.savefig("../output/correlation-heartdisease-bmi.jpg")
-plt.tight_layout()
-plt.show()
 print("Correlation between Heart Disease and BMI:")
 print(
     f"\t Pearson:  {sts.pearsonr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI'])[0]:.3f}"
@@ -193,6 +170,45 @@ print(
 print(
     f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI']).correlation:.3f}"
     + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI']).pvalue:.10f}"
+)
+
+#Pearson and Spearman correlation between (HeartDisease, PhysicalHealth)  
+data_encoded_corr['PhysicalHealth'] = pd.to_numeric(data_encoded_corr['PhysicalHealth'])
+
+print("Correlation between Heart Disease and Physical Health:")
+print(
+    f"\t Pearson:  {sts.pearsonr(data_encoded_corr['HeartDisease'], data_encoded_corr['PhysicalHealth'])[0]:.3f}"
+    + f" | p={sts.pearsonr(data_encoded_corr['HeartDisease'], data_encoded_corr['PhysicalHealth'])[1]:.10f}"
+)
+print(
+    f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['PhysicalHealth']).correlation:.3f}"
+    + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['PhysicalHealth']).pvalue:.10f}"
+)
+
+#Pearson and Spearman correlation between (HeartDisease, MentalHealth)
+data_encoded_corr['MentalHealth'] = pd.to_numeric(data_encoded_corr['MentalHealth'])
+
+print("Correlation between Heart Disease and Mental Health:")
+print(
+    f"\t Pearson:  {sts.pearsonr(data_encoded_corr['HeartDisease'], data_encoded_corr['MentalHealth'])[0]:.3f}"
+    + f" | p={sts.pearsonr(data_encoded_corr['HeartDisease'], data_encoded_corr['MentalHealth'])[1]:.10f}"
+)
+print(
+    f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['MentalHealth']).correlation:.3f}"
+    + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['MentalHealth']).pvalue:.10f}"
+)
+
+#Pearson and Spearman correlation between (HeartDisease, SleepTime)
+data_encoded_corr['SleepTime'] = pd.to_numeric(data_encoded_corr['SleepTime'])
+
+print("Correlation between Heart Disease and Sleep Time:")
+print(
+    f"\t Pearson:  {sts.pearsonr(data_encoded_corr['HeartDisease'], data_encoded_corr['SleepTime'])[0]:.3f}"
+    + f" | p={sts.pearsonr(data_encoded_corr['HeartDisease'], data_encoded_corr['SleepTime'])[1]:.10f}"
+)
+print(
+    f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['SleepTime']).correlation:.3f}"
+    + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['SleepTime']).pvalue:.10f}"
 )
 
 
