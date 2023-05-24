@@ -14,6 +14,7 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 import os
 from sklearn.cluster import DBSCAN
 import pandas as pd
+from scipy.stats import chi2_contingency
 
 #comment hellloooooooooooooooooooooooooooooooooooo
 
