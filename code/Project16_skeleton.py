@@ -9,16 +9,18 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import StratifiedKFold
 from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import NearestNeighbors
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import roc_curve, confusion_matrix, auc
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score
 import os
 from sklearn.cluster import DBSCAN
 import pandas as pd
 from scipy.stats import chi2_contingency
-#Version martina 25.05.23, 15:30 Uhr
+#Version martina 24.05.23, 22:30 Uhr
+#code seems to compile but takes like 20 min until it computes all folds.
 #Import data
 data = pd.read_csv("./data/heart_2020_cleaned.csv")
 
@@ -71,7 +73,7 @@ age_categories.sort()
 print(age_categories)
 
 
-cat_cols.remove('HeartDisease') #since we want to predict heart disease based on the other variables
+#cat_cols.remove('HeartDisease') #since we want to predict heart disease based on the other variables
 print(data.dtypes)
 print(data.head())
 print("*******************Numerical Data*******************")
@@ -145,7 +147,7 @@ fig_age.set_title("General Health and Heart Disease")
 
 
 
-
+'''
 #statistical tests for categorical variables (in the list cat_cols)
 #check what a good sample size is for the chi2 test
 print("*******************Statistical testing for categorical variables (Chi-squared)*******************")
@@ -201,7 +203,7 @@ for col in num_cols:
     else:
         print(f"Statistical correlation between {col} and Heart Disease (p={p:.4f}).")
 
-
+'''
 #KNN Classification
 
 print("*******************K-Nearest Neighbour*******************")
@@ -215,25 +217,30 @@ def get_confusion_matrix(y,y_pred):
 
     # define positive and negative classes.
     
-    for i in range(0, len(y)):
-        if y[i] == 1:
-            # positive class.
-            if y_pred[i] == 1:
-                tp += 1
-            else:
-                fn += 1
+    for i in range(len(y)):
+        if y[i] ==1 and y_pred[i] == 1:
+            tp += 1
+        elif y[i] ==1 and y_pred[i] == 0:
+            fn += 1
+        elif  y[i] ==0 and y_pred[i] == 0:
+            tn += 1
         else:
-            # negative class.
-            if y_pred[i] == 0:
-                tn += 1
-            else:
-                fp += 1
+            fp += 1
     return tn, fp, fn, tp
 
 def evaluation_metrics(clf, y, X, ax,legend_entry='my legendEntry'):
+    
+    
     # Get the label predictions
-    y_test_pred    = clf.predict(X)
+    y_test_pred = clf.predict(X)
 
+    y = y.values
+
+    print(len(y))
+    print(y)
+    print(y.shape)
+    print(len(y_test_pred))
+    print(y_test_pred)
     # Calculate the confusion matrix given the predicted and true labels with your function
     tn, fp, fn, tp = get_confusion_matrix(y, y_test_pred)
 
@@ -270,16 +277,26 @@ def evaluation_metrics(clf, y, X, ax,legend_entry='my legendEntry'):
 
 #perform one-hot encoding
 print("*******************One-Hot Encoding*******************")
-X = data.drop('HeartDisease', axis = 1)
-X.head()
-y = data['HeartDisease']
-X_encoded = pd.get_dummies(X, columns=cat_cols, drop_first=True)
+y = data['HeartDisease'].replace({'True': 1, 'False': 0}).astype(int) #reconverted to integer from bool. MAYBE DO NOT CONVERT TO BOOL IN THE DATA PREPROCESSING
+X_encoded = data.drop('HeartDisease', axis=1)
+cat_cols.remove('HeartDisease')
+
+print(cat_cols)
+for col in cat_cols:
+    X_encoded[col] = X_encoded[col].replace({'True': 1, 'False': 0})
+
+X_encoded = pd.get_dummies(X_encoded, columns=cat_cols, drop_first=True)
+
+
 print(X_encoded.head())
+print(y.head())
+
+
 
 #5-fold crossvalidation
 
 n_splits = 5
-df_performance = pd.DataFrame(columns = ['fold','accuracy','precision','recall',
+df_performance = pd.DataFrame(columns = ['clf', 'fold','accuracy','precision','recall',
                                          'specificity','F1','roc_auc'])
 df_KNN_normcoef = pd.DataFrame(index = X_encoded.columns, columns = np.arange(n_splits))
 fold = 0
@@ -289,53 +306,52 @@ skf = StratifiedKFold(n_splits)
 
 X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2)
 
-# loop over every split  
-for train_index, test_index in skf.split(X_encoded, y):
+#k is a hyperparameter --> loop over different values of k and find the most accurate one
+#k is ideally an uneven value
 
-    # Get the relevant subsets for training and testing
-    X_test  = X_encoded.iloc[test_index]
-    y_test  = y.iloc[test_index]
-    X_train = X_encoded.iloc[train_index]
-    y_train = y.iloc[train_index]
-
-
-    # Standardize only the numerical features 
-    sc = StandardScaler()
-    for col in [num_cols]: 
-        X_train_sc = sc.fit_transform(X_train)
-    X_test_sc  = sc.transform(X_test)
-
-    #train model using the euclidian distance metric
-    knn = NearestNeighbors(n_neighbors= 5, metric = 'euclidean')
-    knn.fit(X_train, y_train)
-
-    distances, indices = knn.kneighbors(X_test)
-    y_pred = []
-    #evaluation for k = 5
-    eval_metrics = evaluation_metrics(y_test, X_test_sc, axs[0],legend_entry=str(fold))
-    df_performance.loc[len(df_performance)-1,:] = [fold,'KNN']+eval_metrics
-
-
-    # increase counter for folds
-    fold += 1
-
-
-'''
-#iterate over several k to identify the best k
-k_values = [i for i in range (1,31)]
-scores = []
-
-scaler = StandardScaler()
-X = scaler.fit_transform(X)
-
+k_values = [3, 5, 7, 9, 11, 13, 15]#[k for k in range (3, 15, 2)]
+fold_results =  [] #stores the results of the different k
+accuracy_scores = []
 for k in k_values:
-    knn = NearestNeighbors(n_neighbors = k)
-    #score = accuracy score for k = 5
-    scores.append(np.mean())
+# loop over every split  
+    for train_index, test_index in skf.split(X_encoded, y):
+
+        #get the training and test data fold
+        X_test  = X_encoded.iloc[test_index]
+        y_test  = y.iloc[test_index]
+        X_train = X_encoded.iloc[train_index]
+        y_train = y.iloc[train_index]
+
+
+        # Standardize features (only numerical features)
+        sc = StandardScaler()
+        X_train_sc = sc.fit_transform(X_train)
+        X_test_sc  = sc.transform(X_test)
+
+
+        #train KNN model using the euclidian distance metric
+        knn = KNeighborsClassifier(n_neighbors=5)
+        knn.fit(X_train_sc, y_train)
+        y_test_pred = knn.predict(X_test)
+        
+        #evaluation for k = 5
+        eval_metrics = evaluation_metrics(knn, y_test, X_test_sc, axs[0],legend_entry=str(fold))
+
+        df_performance.loc[len(df_performance)-1,:] = [fold,'KNN']+eval_metrics
+        #add the result of the current fold to the list of folds
+        accuracy = accuracy_score(y_test, y_test_pred)
+        fold_results.append(accuracy) #should give the accuracy of the current evaluation
+        
+        # increase counter for folds
+        fold += 1
+    #calculate and append the average accuracy for the current k
+    average_accuracy = sum(fold_results) / len(fold_results) #add up the five results of the five folds and get the average
+    accuracy_scores.append(average_accuracy)
+
 #plot every k against the accuracy
-sns.lineplot(x = k_values, y = scores, marker = 'o')
+sns.lineplot(x = k_values, y = accuracy_scores, marker = 'o')
 plt.xlabel("K Values")
 plt.ylabel("Accuracy Score")
+plt.title("Elbow Plot for Hyperparameter k")
 
-'''
 
