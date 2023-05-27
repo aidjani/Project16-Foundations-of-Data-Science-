@@ -1,1 +1,186 @@
+import pandas as pd
+import seaborn as sns
+import numpy as np
+from scipy.spatial.distance import cdist
+import matplotlib.pyplot as plt
+import scipy.stats as sts
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import StratifiedKFold
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import roc_curve, confusion_matrix, auc
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score
+import os
+from sklearn.cluster import DBSCAN
+import pandas as pd
+from scipy.stats import chi2_contingency
+from sklearn.svm import SVC
+from sklearn.metrics import f1_score
 
+
+#Import data
+data = pd.read_csv("../data/heart_2020_cleaned.csv")
+
+#Remove SleepTime 
+data = data.drop('SleepTime', axis=1)
+
+#Inspect the data
+print(data.head())
+print("The dataset has ", data.shape[0], "rows ", data.shape[1], "columns and", data.shape[0]*data.shape[1], "entries.")
+
+
+print("******************Description of the data***************************")
+print(data.describe())
+
+for col in data.columns:
+    unique_values = data[col].unique()
+    unique_count = len(unique_values)
+    print("Sum of unique values in", col, ":", unique_count)
+columns = data.columns.values.tolist() #list of all column names
+#print(columns)
+print("*******************Cleaning the data*******************")
+#data = data.drop(data[data['SleepTime'] > 20].index) #based on research, it is not possible to sleep more than 20 h per night
+print(data.isna().sum()) #no missing data
+print("*******************Data Type Inspection*******************")
+
+#inspect the data types
+num_cols = []
+cat_cols = []
+print(data.dtypes) #data types are float64 and object
+
+
+#age and general health should be numerical and not categorical data!
+for col in columns:
+    if data[col].dtype == "float64":
+       num_cols.append(col) 
+    else:
+        cat_cols.append(col)
+
+print(num_cols)
+print(cat_cols)
+#physical health, mental health and sleep time can be stored as integers rather than floats
+data['PhysicalHealth'] = data['PhysicalHealth'].astype("int32") 
+data['MentalHealth'] = data['MentalHealth'].astype("int32")
+#data['SleepTime'] = data['SleepTime'].astype("int32") removed sleeptime 
+for col in cat_cols:    
+    print("Categories in ", col, ": ", data[col].unique()) #nr of categories the categorical variable has
+    if col != "Sex" and data[col].nunique() == 2: #convert to booleans
+        data[col] = data[col].map({'Yes': True, 'No': False})
+
+#sort the age categories by age
+age_categories = data['AgeCategory'].unique()
+age_categories.sort()
+print(age_categories)
+
+#cat_cols.remove('HeartDisease') #since we want to predict heart disease based on the other variables
+print(data.dtypes)
+print(data.head())
+
+######################## SVM Without Feature Selection ########################################
+##One-Hot Encoding
+#One-hot Encoding for total Data Set 
+print("*******************One-Hot Encoding*******************")
+y = data['HeartDisease'].replace({'True': 1, 'False': 0}).astype(int) #reconverted to integer from bool. MAYBE DO NOT CONVERT TO BOOL IN THE DATA PREPROCESSING
+X_encoded = data.drop('HeartDisease', axis=1)
+cat_cols.remove('HeartDisease')
+
+print(cat_cols)
+for col in cat_cols:
+    X_encoded[col] = X_encoded[col].replace({'True': 1, 'False': 0})
+
+X_encoded = pd.get_dummies(X_encoded, columns=cat_cols, drop_first=True)
+
+
+print(X_encoded.head())
+print(y.head())
+
+print('SVM for all features')
+#One-Hot Encoding for sample of 5000
+sample_data = data.sample(n=5000, random_state=42)
+sample_encoded = pd.get_dummies(sample_data, columns=cat_cols, drop_first=True)
+y_sample = sample_data['HeartDisease']
+
+
+#5-fold crossvalidation ?????!!!!!!!!!!!!!!!!???????????
+n_splits = 5
+#data_encoded_performance = pd.DataFrame(columns = ['clf', 'fold','accuracy','precision','recall',
+#                                         'specificity','F1','roc_auc'])
+#data_encoded_normcoef = pd.DataFrame(index = X_encoded.columns, columns = np.arange(n_splits))
+skf = StratifiedKFold(n_splits)
+
+#Split dataset 80/20
+#X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2)
+
+##Non-Lineaer SVM (Check cost parameters with different cost parameters)
+c = [0.1, 1, 10, 100, 1000]
+
+#sample of 5000 
+for C in c:
+    fold = 0
+    for train_index, test_index in skf.split(sample_encoded, y_sample):
+        X_train, X_test = sample_encoded.iloc[train_index], sample_encoded.iloc[test_index]
+        y_train, y_test = y_sample.iloc[train_index], y_sample.iloc[test_index]
+    
+        svm_non = SVC(kernel='rbf', C=C)
+        svm_non.fit(X_train, y_train)
+        y_pred = svm_non.predict(X_test)
+        score = f1_score(y_test, y_pred)
+
+        print(f"Cost: {C} - Fold: {fold+1} - F1 score: {score}")
+
+        fold += 1
+
+#Total data set (is compiling but takes forever- data set is to big)
+'''
+for C in c:
+    fold = 0
+    for train_index, test_index in skf.split(X_encoded, y):
+        X_train, X_test = X_encoded.iloc[train_index], X_encoded.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+    
+        svm_non = SVC(kernel='rbf', C=C)
+        svm_non.fit(X_train, y_train)
+        y_pred = svm_non.predict(X_test)
+        score = f1_score(y_test, y_pred)
+
+        print(f"Cost: {C} - Fold: {fold+1} - F1 score: {score}")
+
+        fold += 1
+'''
+
+######################### SVM With Feature Selection ####################################
+print('SVM With Feature Selection')
+#For sample size set 
+selected_features = ['PhysicalHealth', 'BMI', 'DiffWalking', 'AgeCategory', 'Diabetic', 'KidneyDisease']
+sample_selected = sample_data[selected_features]
+
+#One-hot encoding 
+sample_encoded = pd.get_dummies(sample_selected)
+y_sample = sample_data['HeartDisease']
+
+#5-fold cross-validation
+n_splits = 5
+skf = StratifiedKFold(n_splits)
+
+# Non-Linear SVM with different cost parameters
+c = [0.1, 1, 10, 100, 1000]
+
+for C in c:
+    fold = 0
+    for train_index, test_index in skf.split(sample_encoded, y_sample):
+        X_train, X_test = sample_encoded.iloc[train_index], sample_encoded.iloc[test_index]
+        y_train, y_test = y_sample.iloc[train_index], y_sample.iloc[test_index]
+    
+        svm_non = SVC(kernel='rbf', C=C)
+        svm_non.fit(X_train, y_train)
+        y_pred = svm_non.predict(X_test)
+        score = f1_score(y_test, y_pred)
+
+        print(f"Cost: {C} - Fold: {fold+1} - F1 score: {score}")
+
+        fold += 1
