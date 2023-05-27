@@ -1,1 +1,408 @@
+import pandas as pd
+import seaborn as sns
+import numpy as np
+from scipy.spatial.distance import cdist
+import matplotlib.pyplot as plt
+import scipy.stats as sts
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import StratifiedKFold
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import roc_curve, confusion_matrix, auc
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score
+import os
+from sklearn.cluster import DBSCAN
+import pandas as pd
+from scipy.stats import chi2_contingency
+#Version martina 24.05.23, 22:30 Uhr
+#code seems to compile but takes like 20 min until it computes all folds.
+#Import data
+data = pd.read_csv("../data/heart_2020_cleaned.csv")
+
+#Remove SleepTime 
+data = data.drop('SleepTime', axis=1)
+
+#Inspect the data
+print(data.head())
+print("The dataset has ", data.shape[0], "rows ", data.shape[1], "columns and", data.shape[0]*data.shape[1], "entries.")
+
+
+print("******************Description of the data***************************")
+print(data.describe())
+
+for col in data.columns:
+    unique_values = data[col].unique()
+    unique_count = len(unique_values)
+    print("Sum of unique values in", col, ":", unique_count)
+columns = data.columns.values.tolist() #list of all column names
+#print(columns)
+print("*******************Cleaning the data*******************")
+#data = data.drop(data[data['SleepTime'] > 20].index) #based on research, it is not possible to sleep more than 20 h per night
+print(data.isna().sum()) #no missing data
+print("*******************Data Type Inspection*******************")
+
+#inspect the data types
+num_cols = []
+cat_cols = []
+print(data.dtypes) #data types are float64 and object
+
+
+#age and general health should be numerical and not categorical data!
+for col in columns:
+    if data[col].dtype == "float64":
+       num_cols.append(col) 
+    else:
+        cat_cols.append(col)
+
+print(num_cols)
+print(cat_cols)
+#physical health, mental health and sleep time can be stored as integers rather than floats
+data['PhysicalHealth'] = data['PhysicalHealth'].astype("int32") 
+data['MentalHealth'] = data['MentalHealth'].astype("int32")
+#data['SleepTime'] = data['SleepTime'].astype("int32") removed sleeptime 
+for col in cat_cols:    
+    print("Categories in ", col, ": ", data[col].unique()) #nr of categories the categorical variable has
+    if col != "Sex" and data[col].nunique() == 2: #convert to booleans
+        data[col] = data[col].map({'Yes': True, 'No': False})
+
+#sort the age categories by age
+age_categories = data['AgeCategory'].unique()
+age_categories.sort()
+print(age_categories)
+
+
+#cat_cols.remove('HeartDisease') #since we want to predict heart disease based on the other variables
+print(data.dtypes)
+print(data.head())
+
+
+print("*******************Numerical Data*******************")
+
+#check the data for normality in numerical data using the Shapiro-Wilk Test
+for col in num_cols:    
+    sampled_data =  data[col].sample(n = 5000, random_state = 42) #because of warning that above 5000 the test may not work
+    p = sts.shapiro(sampled_data).pvalue 
+    print(f"Test for normality of {col}: p={p:.10f}") 
+    #all p values are below 0.05 --> none of the data is normally distributed 
+
+
+'''
+#plot the numerical data distributions
+fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+
+print(num_cols)
+for i in range (len(num_cols)):
+    row = i // 2 
+    col = i % 2
+    col_name = num_cols[i]
+    sns.histplot(data=data, x=col_name, ax=axs[row, col])
+    axs[row, col].set_xlabel(col_name)
+    axs[row, col].set_ylabel('Count')
+    axs[row, col].set_title(col_name + ' Distribution')
+#maybe rename the columns so that it is Mental Health and not MentalHealth
+plt.savefig('../output/numerical_distributions.jpg')
+plt.tight_layout()
+#plt.show()
+'''
+
+#categorical data
+print("*******************Categorical Data*******************")
+
+
+#age is definitely not normally distributed
+fig_age= sns.countplot(data, x = "AgeCategory", order = age_categories, hue='HeartDisease', dodge = False)
+fig_age.set_title("Age Distribution with Heart Disease")
+#plt.savefig('/output/age_distribution.jpg')
+plt.tight_layout()
+#plt.show()
+
+'''
+#statistical tests for categorical variables (in the list cat_cols)
+#check what a good sample size is for the chi2 test
+print("*******************Statistical testing for categorical variables (Chi-squared)*******************")
+
+print("*******************sample size 500*******************")
+alpha = 0.05 / len(cat_cols)  # multiple testing adjustment
+# Randomly sample 500 observations from the column
+for col in cat_cols:   
+    sampled_data = data[col].sample(n=500, random_state=42)
+    
+    # Perform chi-square test on the sampled data
+    contingency_table = pd.crosstab(sampled_data, data["HeartDisease"])
+    chi2, p, _, _ = sts.chi2_contingency(contingency_table)
+    
+    # Interpret the results
+    if p > alpha:
+        print(f"No statistical correlation between {col} and Heart Disease (p={p:.4f})." )
+    else:
+        print(f"Statistical correlation between {col} and Heart Disease (p={p:.4f}).")
+print("*******************sample size 5000*******************")
+# Randomly sample 5000 observations from the column
+for col in cat_cols:   
+    sampled_data = data[col].sample(n=5000, random_state=42)
+    
+    # Perform chi-square test on the sampled data
+    contingency_table = pd.crosstab(sampled_data, data["HeartDisease"])
+    chi2, p, _, _ = sts.chi2_contingency(contingency_table)
+    
+    # Interpret the results
+    if p > alpha:
+        print(f"No statistical correlation between {col} and Heart Disease (p={p:.4f})." )
+    else:
+        print(f"Statistical correlation between {col} and Heart Disease (p={p:.4f}).")
+
+print("*******************original sample size*******************")
+for col in cat_cols:
+    contingency_table = pd.crosstab(data[col], data["HeartDisease"])
+    chi2, p, _, _ = sts.chi2_contingency(contingency_table)
+    if p > alpha:
+            print(f"No statistical correlation between {col} and Heart Disease (p={p:.4f})." )
+    else:
+        print(f"Statistical correlation between {col} and Heart Disease (p={p:.4f}).")
+
+print("*******************Statistical testing for numerical variables (Wilcoxon ranksums)*******************")
+alpha = 0.05 / len(num_cols)
+for col in num_cols:
+    p = sts.ranksums(
+                data[data["HeartDisease"]][col],
+                data[~data["HeartDisease"]][col],
+            ).pvalue
+    if p > alpha:
+            print(f"No statistical correlation between {col} and Heart Disease (p={p:.4f})." )
+    else:
+        print(f"Statistical correlation between {col} and Heart Disease (p={p:.4f}).")
+
+'''
+#is it better to do one-hot encoding or convert to booleans?
+
+#perform one-hot encoding
+print("*******************One-Hot Encoding*******************")
+y = data['HeartDisease'].replace({'True': 1, 'False': 0}).astype(int) #reconverted to integer from bool. MAYBE DO NOT CONVERT TO BOOL IN THE DATA PREPROCESSING
+X_encoded = data.drop('HeartDisease', axis=1)
+cat_cols.remove('HeartDisease')
+
+print(cat_cols)
+for col in cat_cols:
+    X_encoded[col] = X_encoded[col].replace({'True': 1, 'False': 0})
+
+X_encoded = pd.get_dummies(X_encoded, columns=cat_cols, drop_first=True)
+
+
+print(X_encoded.head())
+print(y.head())
+
+
+###Visualization of data balance" Bar plot (Boolean data)
+data['Sex'] = data['Sex'].map({'Male': 0, 'Female': 1})
+columns_vis = ['Smoking', 'AlcoholDrinking', 'Stroke', 'DiffWalking', 'Sex',
+           'PhysicalActivity', 'Asthma', 'KidneyDisease', 'SkinCancer']
+
+fig, axs = plt.subplots(3, 3, figsize=(12, 9))
+for i in range(3):
+    for j in range(3):
+        # Plot the corresponding column
+         # Create count plot for the corresponding column
+        sns.countplot(data[columns_vis[i*3+j]], ax=axs[i, j])
+        axs[i, j].set_title(columns_vis[i*3+j])
+        axs[i, j].set_xlabel("")
+        axs[i, j].set_ylabel("")
+        # Set the x-axis tick labels
+        axs[i, j].set_xticks([0, 1])
+        axs[i, j].set_xticklabels(['No', 'Yes'])
+
+plt.tight_layout()
+plt.savefig('../output/boolean_visualization.jpg')
+plt.show()
+
+
+##Smoking without HD
+
+##Smoking with HD
+fig_genhealth = sns.countplot(data, x="Smoking", hue='HeartDisease', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('Smoking with Heart Disease')
+plt.tight_layout()
+plt.savefig('../output/Smoking.jpg')
+plt.show()
+##Alcohol Drinking without HD 
+
+##Alcohol Drinking with HD
+
+##Stroke without HD
+
+##Stroke with HD
+
+##Diff Walking wthout HD
+
+##Diff Waling with HD
+
+##Sex without HD
+
+##Sex with HD 
+
+
+'''
+###Visualization of data balance: Bar plot (categorical data) 
+##Race without heartdiseas
+fig_race = sns.countplot(data, x="Race", color = 'lightblue', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('Race')
+plt.tight_layout()
+plt.savefig('../output/race_distribution.jpg')
+plt.show()
+##Race with heartdisease
+fig_race = sns.countplot(data, x="Race", hue='HeartDisease', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('Race with Heart Disease')
+plt.tight_layout()
+plt.savefig('../output/race_distribution_HD.jpg')
+plt.show()
+
+##Diabetic  without HD
+fig_diabetic = sns.countplot(data, x="Diabetic", color = 'lightblue', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('Diabetic')
+plt.tight_layout()
+plt.savefig('../output/diabetic_distribution.jpg')
+plt.show()
+##Diabetic with HD
+fig_diabetic = sns.countplot(data, x="Diabetic", hue='HeartDisease', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('Diabetic with Heart Disease')
+plt.tight_layout()
+plt.savefig('../output/diabetic_distribution_HD.jpg')
+plt.show()
+
+#GenHealth without HD 
+fig_genhealth = sns.countplot(data, x="GenHealth", color = 'lightblue', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('¨General Health')
+plt.tight_layout()
+plt.savefig('../output/genhealth_distribution.jpg')
+plt.show()
+#GenHealth with HD
+fig_genhealth = sns.countplot(data, x="GenHealth", hue='HeartDisease', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('General Health with Heart Disease')
+plt.tight_layout()
+plt.savefig('../output/genhealth_distribution.jpg')
+plt.show()
+
+#AgeCategory without HD
+fig_age= sns.countplot(data, x = "AgeCategory", order = age_categories, color = 'lightblue', dodge = False) 
+plt.title('Age Category')
+plt.tight_layout()
+plt.savefig('../output/age_distribution.jpg')
+plt.show()
+#AgeCategory with HD
+fig_age= sns.countplot(data, x = "AgeCategory", order = age_categories, hue='HeartDisease', dodge = False) 
+plt.title('Age Category with Heart Disease')
+plt.tight_layout()
+plt.savefig('../output/age_distribution.jpg')
+plt.show()
+'''
+'''
+#Tried to get all in one, but colours are off
+for i, cat_var in enumerate(categorical_variables):
+    ax = axes[i]  # Define the ax variable here
+
+    # Calculate value counts for the current categorical variable
+    category_counts = data[cat_var].value_counts()
+
+    # Plot the bars for each category with different colors based on 'HeartDisease'
+    bars = ax.bar(category_counts.index, category_counts.values, color=[heart_disease_colors.get(x, 'gray') for x in category_counts.index])
+
+    ax.set_xlabel('Categories')
+    ax.set_ylabel('Count')
+    ax.set_title(f'Balance of {cat_var}')
+    ax.tick_params(axis='x', labelrotation=45, labelsize=8)
+    ax.margins(y=0.2)
+
+plt.subplots_adjust(hspace=subplot_spacing, top=0.9)
+plt.savefig('../output/balance_visualization.jpg')
+plt.tight_layout()
+plt.show()
+'''
+
+##Spearman correlations  #! sample size 
+print("*******************Pearson and Spearman correlations*******************")
+#Spearman correlation between (HeartDisease, BMI)  
+data_encoded_corr = pd.get_dummies(data, columns=cat_cols)
+data_encoded_corr['HeartDisease'] = data_encoded_corr['HeartDisease'].map({'No': 0, 'Yes': 1})
+data_encoded_corr['BMI'] = pd.to_numeric(data_encoded_corr['BMI'])
+
+print(data_encoded_corr.head())
+
+print("Correlation between Heart Disease and BMI:")
+print(
+    f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI']).correlation:.3f}"
+    + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI']).pvalue:.10f}"
+)
+
+#Spearman correlation between (HeartDisease, PhysicalHealth)  
+data_encoded_corr['PhysicalHealth'] = pd.to_numeric(data_encoded_corr['PhysicalHealth'])
+
+print("Correlation between Heart Disease and Physical Health:")
+print(
+    f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['PhysicalHealth']).correlation:.3f}"
+    + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['PhysicalHealth']).pvalue:.10f}"
+)
+
+#Spearman correlation between (HeartDisease, MentalHealth)
+data_encoded_corr['MentalHealth'] = pd.to_numeric(data_encoded_corr['MentalHealth'])
+
+print("Correlation between Heart Disease and Mental Health:")
+print(
+    f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['MentalHealth']).correlation:.3f}"
+    + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['MentalHealth']).pvalue:.10f}"
+)
+
+'''
+#Spearman correlation between (HeartDisease, SleepTime)
+data_encoded_corr['SleepTime'] = pd.to_numeric(data_encoded_corr['SleepTime'])
+
+print("Correlation between Heart Disease and Sleep Time:")
+print(
+    f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['SleepTime']).correlation:.3f}"
+    + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['SleepTime']).pvalue:.10f}"
+)
+'''
+
+'''
+#Heatmap
+# #cat_vars = ['HeartDisease', 'AgeCategory', 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth']
+cat_vars = ['HeartDisease', 'BMI', 'Smoking', 'AlcoholDrinking', 'Stroke', 'PhysicalHealth', 'MentalHealth', 'DiffWalking', 'Sex', 'AgeCategory', 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth', 'Asthma', 'KidneyDisease', 'SkinCancer']
+# Create a contingency table for each pair of categorical variables
+contingency_table = pd.DataFrame(index=cat_vars, columns=cat_vars)
+
+for var1 in cat_vars:
+    for var2 in cat_vars:
+        # Create a cross-tabulation between the variables
+        cross_tab = pd.crosstab(data[var1], data[var2])
+        
+        # Perform chi-square test and extract the chi-square statistic
+        chi2, _, _, _ = chi2_contingency(cross_tab)
+        
+        # Calculate Cramér's V statistic
+        n = cross_tab.sum().sum()
+        cramers_v = np.sqrt(chi2 / (n * min(cross_tab.shape) - 1))
+        
+        # Assign the Cramér's V value to the contingency table
+        contingency_table.loc[var1, var2] = cramers_v
+
+# Create a heatmap for the contingency table
+plt.figure(figsize=(10, 8))
+sns.heatmap(contingency_table.astype(float), annot=False, cmap='coolwarm', fmt='.2f',vmin=0, vmax=0.2 )
+plt.title("Categorical Variables Heatmap (Cramér's V)")
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0) 
+plt.tight_layout()
+plt.savefig('../output/categorical_heatmap.jpg', dpi=300)
+plt.show()
+'''
 
