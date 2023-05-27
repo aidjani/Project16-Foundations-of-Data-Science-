@@ -178,26 +178,10 @@ for col in num_cols:
         print(f"Statistical correlation between {col} and Heart Disease (p={p:.4f}).")
 
 '''
-#is it better to do one-hot encoding or convert to booleans?
-
-#perform one-hot encoding
-print("*******************One-Hot Encoding*******************")
-y = data['HeartDisease'].replace({'True': 1, 'False': 0}).astype(int) #reconverted to integer from bool. MAYBE DO NOT CONVERT TO BOOL IN THE DATA PREPROCESSING
-X_encoded = data.drop('HeartDisease', axis=1)
-cat_cols.remove('HeartDisease')
-
-print(cat_cols)
-for col in cat_cols:
-    X_encoded[col] = X_encoded[col].replace({'True': 1, 'False': 0})
-
-X_encoded = pd.get_dummies(X_encoded, columns=cat_cols, drop_first=True)
-
-
-print(X_encoded.head())
-print(y.head())
-
 
 ###Visualization of data balance" Bar plot (Boolean data)
+#Tried to get all in one subplot couldnt figure it out 
+'''
 data['Sex'] = data['Sex'].map({'Male': 0, 'Female': 1})
 columns_vis = ['Smoking', 'AlcoholDrinking', 'Stroke', 'DiffWalking', 'Sex',
            'PhysicalActivity', 'Asthma', 'KidneyDisease', 'SkinCancer']
@@ -214,37 +198,80 @@ for i in range(3):
         # Set the x-axis tick labels
         axs[i, j].set_xticks([0, 1])
         axs[i, j].set_xticklabels(['No', 'Yes'])
-
 plt.tight_layout()
 plt.savefig('../output/boolean_visualization.jpg')
 plt.show()
-
-
+'''
 ##Smoking without HD
-
+fig_genhealth = sns.countplot(data, x="Smoking", dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('Smoking')
+plt.tight_layout()
+plt.savefig('../output/Smoking.jpg')
+plt.show()
 ##Smoking with HD
 fig_genhealth = sns.countplot(data, x="Smoking", hue='HeartDisease', dodge=False)
 plt.xticks(rotation=45, ha = "right")
 plt.title('Smoking with Heart Disease')
 plt.tight_layout()
-plt.savefig('../output/Smoking.jpg')
+plt.savefig('../output/Smoking_HD.jpg')
 plt.show()
 ##Alcohol Drinking without HD 
-
+fig_genhealth = sns.countplot(data, x="AlcoholDrinking", dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('AlcoholDrinking')
+plt.tight_layout()
+plt.savefig('../output/AlcDrink.jpg')
+plt.show()
 ##Alcohol Drinking with HD
-
+fig_genhealth = sns.countplot(data, x="AlcoholDrinking", hue='HeartDisease', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('AlcoholDrinking with Heart Disease')
+plt.tight_layout()
+plt.savefig('../output/AlcDrink_HD.jpg')
+plt.show()
 ##Stroke without HD
-
+fig_genhealth = sns.countplot(data, x="Stroke", dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('Stroke')
+plt.tight_layout()
+plt.savefig('../output/Stroke.jpg')
+plt.show()
 ##Stroke with HD
-
+fig_genhealth = sns.countplot(data, x="Stroke", hue='HeartDisease', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('Stroke with Heart Disease')
+plt.tight_layout()
+plt.savefig('../output/Stroke_HD.jpg')
+plt.show()
 ##Diff Walking wthout HD
-
+fig_genhealth = sns.countplot(data, x="DiffWalking", dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('DiffWalking')
+plt.tight_layout()
+plt.savefig('../output/DiffWalking.jpg')
+plt.show()
 ##Diff Waling with HD
-
+fig_genhealth = sns.countplot(data, x="DiffWalking", hue='HeartDisease', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('DiffWalking with Heart Disease')
+plt.tight_layout()
+plt.savefig('../output/DiffWalking_HD.jpg')
+plt.show()
 ##Sex without HD
-
+fig_genhealth = sns.countplot(data, x="Sex", dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('Sex')
+plt.tight_layout()
+plt.savefig('../output/Sex.jpg')
+plt.show()
 ##Sex with HD 
-
+fig_genhealth = sns.countplot(data, x="Sex", hue='HeartDisease', dodge=False)
+plt.xticks(rotation=45, ha = "right")
+plt.title('Sex with Heart Disease')
+plt.tight_layout()
+plt.savefig('../output/Sex_HD.jpg')
+plt.show()
 
 '''
 ###Visualization of data balance: Bar plot (categorical data) 
@@ -329,6 +356,56 @@ plt.tight_layout()
 plt.show()
 '''
 
+'''
+#Heatmap
+# #cat_vars = ['HeartDisease', 'AgeCategory', 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth']
+cat_vars = ['HeartDisease', 'BMI', 'Smoking', 'AlcoholDrinking', 'Stroke', 'PhysicalHealth', 'MentalHealth', 'DiffWalking', 'Sex', 'AgeCategory', 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth', 'Asthma', 'KidneyDisease', 'SkinCancer']
+# Create a contingency table for each pair of categorical variables
+contingency_table = pd.DataFrame(index=cat_vars, columns=cat_vars)
+
+for var1 in cat_vars:
+    for var2 in cat_vars:
+        # Create a cross-tabulation between the variables
+        cross_tab = pd.crosstab(data[var1], data[var2])
+        
+        # Perform chi-square test and extract the chi-square statistic
+        chi2, _, _, _ = chi2_contingency(cross_tab)
+        
+        # Calculate Cramér's V statistic
+        n = cross_tab.sum().sum()
+        cramers_v = np.sqrt(chi2 / (n * min(cross_tab.shape) - 1))
+        
+        # Assign the Cramér's V value to the contingency table
+        contingency_table.loc[var1, var2] = cramers_v
+
+# Create a heatmap for the contingency table
+plt.figure(figsize=(10, 8))
+sns.heatmap(contingency_table.astype(float), annot=False, cmap='coolwarm', fmt='.2f',vmin=0, vmax=0.2 )
+plt.title("Categorical Variables Heatmap (Cramér's V)")
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0) 
+plt.tight_layout()
+plt.savefig('../output/categorical_heatmap.jpg', dpi=300)
+plt.show()
+'''
+
+#perform one-hot encoding
+print("*******************One-Hot Encoding*******************")
+y = data['HeartDisease'].replace({'True': 1, 'False': 0}).astype(int) #reconverted to integer from bool. MAYBE DO NOT CONVERT TO BOOL IN THE DATA PREPROCESSING
+X_encoded = data.drop('HeartDisease', axis=1)
+cat_cols.remove('HeartDisease')
+
+print(cat_cols)
+for col in cat_cols:
+    X_encoded[col] = X_encoded[col].replace({'True': 1, 'False': 0})
+
+X_encoded = pd.get_dummies(X_encoded, columns=cat_cols, drop_first=True)
+
+
+print(X_encoded.head())
+print(y.head())
+
+
 ##Spearman correlations  #! sample size 
 print("*******************Pearson and Spearman correlations*******************")
 #Spearman correlation between (HeartDisease, BMI)  
@@ -372,37 +449,3 @@ print(
     + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['SleepTime']).pvalue:.10f}"
 )
 '''
-
-'''
-#Heatmap
-# #cat_vars = ['HeartDisease', 'AgeCategory', 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth']
-cat_vars = ['HeartDisease', 'BMI', 'Smoking', 'AlcoholDrinking', 'Stroke', 'PhysicalHealth', 'MentalHealth', 'DiffWalking', 'Sex', 'AgeCategory', 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth', 'Asthma', 'KidneyDisease', 'SkinCancer']
-# Create a contingency table for each pair of categorical variables
-contingency_table = pd.DataFrame(index=cat_vars, columns=cat_vars)
-
-for var1 in cat_vars:
-    for var2 in cat_vars:
-        # Create a cross-tabulation between the variables
-        cross_tab = pd.crosstab(data[var1], data[var2])
-        
-        # Perform chi-square test and extract the chi-square statistic
-        chi2, _, _, _ = chi2_contingency(cross_tab)
-        
-        # Calculate Cramér's V statistic
-        n = cross_tab.sum().sum()
-        cramers_v = np.sqrt(chi2 / (n * min(cross_tab.shape) - 1))
-        
-        # Assign the Cramér's V value to the contingency table
-        contingency_table.loc[var1, var2] = cramers_v
-
-# Create a heatmap for the contingency table
-plt.figure(figsize=(10, 8))
-sns.heatmap(contingency_table.astype(float), annot=False, cmap='coolwarm', fmt='.2f',vmin=0, vmax=0.2 )
-plt.title("Categorical Variables Heatmap (Cramér's V)")
-plt.xticks(rotation=45, ha='right')
-plt.yticks(rotation=0) 
-plt.tight_layout()
-plt.savefig('../output/categorical_heatmap.jpg', dpi=300)
-plt.show()
-'''
-
