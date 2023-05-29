@@ -20,7 +20,8 @@ from sklearn.cluster import DBSCAN
 import pandas as pd
 from scipy.stats import chi2_contingency
 from sklearn.svm import SVC
-from sklearn.metrics import f1_score
+from sklearn.metrics import precision_score, recall_score, f1_score
+
 
 
 #Import data
@@ -101,7 +102,7 @@ print(y.head())
 
 print('SVM for all features')
 #One-Hot Encoding for sample of 5000
-sample_data = data.sample(n=5000, random_state=42)
+sample_data = data.sample(n=10000, random_state=42)
 sample_encoded = pd.get_dummies(sample_data, columns=cat_cols, drop_first=True)
 y_sample = sample_data['HeartDisease']
 
@@ -129,9 +130,12 @@ for C in c:
         svm_non = SVC(kernel='rbf', C=C)
         svm_non.fit(X_train, y_train)
         y_pred = svm_non.predict(X_test)
-        score = f1_score(y_test, y_pred)
 
-        print(f"Cost: {C} - Fold: {fold+1} - F1 score: {score}")
+        precision = precision_score(y_test, y_pred, zero_division=1)
+        recall = recall_score(y_test, y_pred, zero_division=1)
+        f1 = f1_score(y_test, y_pred, zero_division=1)
+
+        print(f"Cost: {C} - Fold: {fold+1} - Precision: {precision}, Recall: {recall}, F1 score: {f1}")
 
         fold += 1
 
@@ -146,9 +150,12 @@ for C in c:
         svm_non = SVC(kernel='rbf', C=C)
         svm_non.fit(X_train, y_train)
         y_pred = svm_non.predict(X_test)
-        score = f1_score(y_test, y_pred)
 
-        print(f"Cost: {C} - Fold: {fold+1} - F1 score: {score}")
+        precision = precision_score(y_test, y_pred, zero_division=1)
+        recall = recall_score(y_test, y_pred, zero_division=1)
+        f1 = f1_score(y_test, y_pred, zero_division=1)
+
+        print(f"Cost: {C} - Fold: {fold+1} - Precision: {precision}, Recall: {recall}, F1 score: {f1}")
 
         fold += 1
 '''
@@ -156,7 +163,9 @@ for C in c:
 ######################### SVM With Feature Selection ####################################
 print('SVM With Feature Selection')
 #For sample size set 
-selected_features = ['PhysicalHealth', 'BMI', 'DiffWalking', 'AgeCategory', 'Diabetic', 'KidneyDisease']
+#selected_features = X_encoded.copy().drop(['HeartDisease', 'MentalHealth', 'AlcoholDrinking_No', 'AlcoholDrinking_Yes', 'Sex_Female', 'Sex_Male', 'Race_American Indian/Alaskan Native', 'Race_Asian', 'Race_Black', 'Race_Hispanic', 'Race_Other', 'Race_White', 'Asthma_No', 'Asthma_Yes'], axis = 1) # with feature selection
+selected_features = ['Smoking', 'Stroke', 'DiffWalking', 'AgeCategory', 'Diabetic', 'PhysicalActivity', 'GenHealth', 'KidneyDisease', 'SkinCancer']
+#selected_features = ['PhysicalHealth', 'BMI', 'DiffWalking', 'AgeCategory', 'Diabetic', 'KidneyDisease']
 sample_selected = sample_data[selected_features]
 
 #One-hot encoding 
@@ -179,8 +188,11 @@ for C in c:
         svm_non = SVC(kernel='rbf', C=C)
         svm_non.fit(X_train, y_train)
         y_pred = svm_non.predict(X_test)
-        score = f1_score(y_test, y_pred)
 
-        print(f"Cost: {C} - Fold: {fold+1} - F1 score: {score}")
+        precision = precision_score(y_test, y_pred, zero_division=1)
+        recall = recall_score(y_test, y_pred, zero_division=1)
+        f1 = f1_score(y_test, y_pred, zero_division=1)
+
+        print(f"Cost: {C} - Fold: {fold+1} - Precision: {precision}, Recall: {recall}, F1 score: {f1}")
 
         fold += 1
