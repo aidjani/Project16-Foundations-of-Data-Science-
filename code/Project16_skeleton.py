@@ -16,10 +16,14 @@ from sklearn.cluster import DBSCAN
 import pandas as pd
 from scipy.stats import chi2_contingency
 
-#comment hellloooooooooooooooooooooooooooooooooooo
 
 #Import data
 data = pd.read_csv("./data/heart_2020_cleaned.csv")
+data = data.iloc[:6000, :]
+
+
+
+print ('################################################################## Data Preprocessing ##################################################################')
 
 #Inspect the data
 print(data.head())
@@ -29,12 +33,23 @@ print(data.isna().sum()) #no missing data
 print("******************Description of the data***************************")
 print(data.describe())
 
+#divide BMI into 4 categories (with WHO recommendations)
+for i in range(len(data)):
+    if data.loc[i, 'BMI'] < 18.5:
+        data.loc[i, 'BMI'] = 'underweight'
+    elif 18.5 <= data.loc[i, 'BMI'] <= 24.9:
+        data.loc[i, 'BMI'] = 'normalweight'
+    elif 25 <= data.loc[i, 'BMI'] <= 29.9:
+        data.loc[i, 'BMI'] = 'overweight'
+    else:
+        data.loc[i, 'BMI'] = 'obesity'
+
 for col in data.columns:
     unique_values = data[col].unique()
     unique_count = len(unique_values)
     print("Sum of unique values in", col, ":", unique_count)
 columns = data.columns.values.tolist() #list of all column names
-#print(columns)
+print(columns)
 
 #inspect the data types
 num_cols = []
@@ -86,7 +101,7 @@ for i in range (len(num_cols)):
 #maybe rename the columns so that it is Mental Health and not MentalHealth
 plt.savefig('./output/numerical_distributions.jpg')
 plt.tight_layout()
-plt.show()
+#plt.show()
 
 #put this part in the bar plot visualization want to keep here too tho?
 ''''
@@ -107,31 +122,33 @@ print(cat_cols)
 
 #one-hot encoding
 print("*******************One-Hot Encoding*******************")
-data_encoded = pd.get_dummies(data, columns=cat_cols, drop_first=True)
+#data_encoded = pd.get_dummies(data, columns=cat_cols, drop_first=True)
+data_encoded = pd.get_dummies(data, columns=cat_cols, drop_first=False)
+
 print(data_encoded.head())
 
 
 #Visualization of data balance: Bar plot (categorical data) 
 fig_race = sns.countplot(data=data, x="Race", hue='HeartDisease', dodge=False)
 plt.xticks(rotation=45, ha = "right")
-plt.savefig('../output/race_distribution.jpg')
-plt.show()
+plt.savefig('./output/race_distribution.jpg')
+#plt.show()
 
 fig_diabetic = sns.countplot(data=data, x="Diabetic", hue='HeartDisease', dodge=False)
 plt.xticks(rotation=45, ha = "right")
-plt.savefig('../output/diabetic_distribution.jpg')
-plt.show()
+plt.savefig('./output/diabetic_distribution.jpg')
+#plt.show()
 
 fig_genhealth = sns.countplot(data=data, x="GenHealth", hue='HeartDisease', dodge=False)
 plt.xticks(rotation=45, ha = "right")
-plt.savefig('../output/genhealth_distribution.jpg')
-plt.show()
+plt.savefig('./output/genhealth_distribution.jpg')
+#plt.show()
 
 fig_age= sns.countplot(data, x = "AgeCategory", order = age_categories, hue='HeartDisease', dodge = False) #definetely not normally distributed 
 plt.xticks(rotation=45, ha = "right")
-plt.savefig('../output/age_distribution.jpg')
+plt.savefig('./output/age_distribution.jpg')
 plt.tight_layout()
-plt.show()
+#plt.show()
 
 ''' #Tried to get all in one, but colours are off
 for i, cat_var in enumerate(categorical_variables):
@@ -153,6 +170,8 @@ plt.subplots_adjust(hspace=subplot_spacing, top=0.9)
 plt.savefig('../output/balance_visualization.jpg')
 plt.tight_layout()
 plt.show()
+'''
+
 '''
 ##Pearson and Spearman correlations
 print("*******************Pearson and Spearman correlations*******************")
@@ -241,12 +260,12 @@ plt.title("Categorical Variables Heatmap (Cramér's V)")
 plt.xticks(rotation=45, ha='right')
 plt.yticks(rotation=0) 
 plt.tight_layout()
-plt.savefig('../output/categorical_heatmap.jpg', dpi=300)
-plt.show()
+plt.savefig('./output/categorical_heatmap.jpg', dpi=300)
+#plt.show()
 
 
 #Loose ends 
-'''for col in cat_cols:    
+    for col in cat_cols:    
     print("Categories in ", col, ": ", data[col].unique()) #how many categories can the categorical variable take?
     if col == "Sex":
         data['Sex'] = data['Sex'].map({True: 'Male', False: 'Female'})
@@ -259,7 +278,7 @@ BMI_hist = sns.histplot(x = data["BMI"], kde = True)
 BMI_hist.set_xlabel("BMI")
 BMI_hist.set_xlabel("Count")
 BMI_hist.set_title("BMI Distribution")
-plt.savefig('../output/BMI.jpg')
+plt.savefig('./output/BMI.jpg')
 plt.tight_layout()
 #plt.show()
 
@@ -267,17 +286,17 @@ phys_hist = sns.countplot(data, x = "PhysicalHealth", hue='HeartDisease', dodge 
 phys_hist.set_xlabel("Physical health within 30 days [score from 0-30]")
 phys_hist.set_xlabel("Count")
 phys_hist.set_title("Physical Health Distribution")
-plt.savefig('../output/physical_health.jpg')
+plt.savefig(./output/physical_health.jpg')
 plt.tight_layout()
 #plt.show()
 '''
 
 
 
+print("################################################################## Logistic Regression & Random Forest & K Nearest Neighbour ##################################################################")
 
-print("##################################################################Logistic Regression & Random Forest##################################################################")
 
-# Import packages that are needed
+''' Import packages that are needed '''
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -288,343 +307,235 @@ from sklearn.metrics import roc_curve, confusion_matrix, auc
 from sklearn.ensemble import RandomForestClassifier
 import matplotlib.pyplot as plt
 
-# Utility function to plot the diagonal line
-def add_identity(axes, *line_args, **line_kwargs):
-    identity, = axes.plot([], [], *line_args, **line_kwargs)
-    def callback(axes):
-        low_x, high_x = axes.get_xlim()
-        low_y, high_y = axes.get_ylim()
-        low = max(low_x, low_y)
-        high = min(high_x, high_y)
-        identity.set_data([low, high], [low, high])
-    callback(axes)
-    axes.callbacks.connect('xlim_changed', callback)
-    axes.callbacks.connect('ylim_changed', callback)
-    return axes
+#data_encoded = data_encoded.head(50)
+#data_encoded = data_encoded.iloc[:1000, :]
 
-# Functions you are asked to complete
+
+''' get confusion matrix of a classifier yielding predictions (y_pred) for the true class labels (y) '''
 def get_confusion_matrix(y, y_pred):
-    """
-    compute the confusion matrix of a classifier yielding
-    predictions y_pred for the true class labels y
-    :param y: true class labels
-    :type y: numpy array
-
-    :param y_pred: predicted class labels
-    :type y_pred: numpy array
-
-    :return: comfusion matrix comprising the
-             true positives (tp),
-             true negatives  (tn),
-             false positives (fp),
-             and false negatives (fn)
-    :rtype: four integers
-    """
-
+   
     # true/false pos/neg.
-    tp = 0
-    fp = 0
-    tn = 0
-    fn = 0
+    tp = 0 # tp = true positive
+    fp = 0 # fp = false positive
+    tn = 0 # tn = true negative
+    fn = 0 # fn = false negative
 
-    # define positive and negative classes.
-    ''''
-    for i in range (len(y)):
-        if y[i] == 'Yes' and y_pred[i] == 'Yes':
-            tp += 1
-        elif y[i] == 'No' and y_pred[i] == 'Yes':
-            fp += 1
-        elif y[i] == 'No' and y_pred[i] == 'No':
-            tn += 1
-        elif y[i] == 'Yes' and y_pred[i] == 'No':
-            fn += 1
-
-    return tn, fp, fn, tp
-    '''
-
+    # summarize positive and negative classes
     for i in range (len(y)):
         if y[i] == 1 and y_pred[i] == 1:
-            tp += 1
+            tp += 1                        
         elif y[i] == 0 and y_pred[i] == 1:
-            fp += 1
+            fp += 1                         
         elif y[i] == 0 and y_pred[i] == 0:
             tn += 1
         elif y[i] == 1 and y_pred[i] == 0:
             fn += 1
-
-
-    '''
-    for i in range (0, len(y)):
-        if y[i, 1] == 1 and y_pred[i] == 1:
-            tp += 1
-        elif y[i, 1] == 0 and y_pred[i] == 1:
-            fp += 1
-        elif y[i, 1] == 0 and y_pred[i] == 0:
-            tn += 1
-        elif y[i, 1] == 1 and y_pred[i] == 0:
-            fn += 1
-    '''
-    print(tn)
-
     return tn, fp, fn, tp
 
+''' compute the evaltuation metrics for the provided classifier (given: true labels, input features) '''
 def evaluation_metrics(clf, y, X, ax,legend_entry='my legendEntry'):
-    """
-    compute multiple evaluation metrics for the provided classifier given the true labels
-    and input features. Provides a plot of the roc curve on the given axis with the legend
-    entry for this plot being specified, too.
 
-    :param clf: true class labels
-    :type clf: numpy array
-
-    :param y: true class labels
-    :type y: numpy array
-
-    :param X: feature matrix
-    :type X: numpy array
-
-    :param ax: matplotlib axis to plot on
-    :type legend_entry: matplotlib Axes
-
-    :param legend_entry: the legend entry that should be displayed on the plot
-    :type legend_entry: string
-
-    :return: comfusion matrix comprising the
-             true positives (tp),
-             true negatives  (tn),
-             false positives (fp),
-             and false negatives (fn)
-    :rtype: four integers
-    """
-
-    # Get the label predictions
+    # calculate labels prediction
     y_test_pred = clf.predict(X)
     
-
     #convert y into an array-> same dimension as y_test_pred (=> needed for def get_confusion_matrix)
     y = y.values
 
-
-    print(len(y))
-    print(y)
-    print(y.shape)
-    print(len(y_test_pred))
-    print(y_test_pred)
-
-    # Calculate the confusion matrix given the predicted and true labels with your function
+    # Calculate the confusion matrix
     tn, fp, fn, tp = get_confusion_matrix(y, y_test_pred)
 
-
-    # Ensure that you get correct values - this code will divert to
-    # sklearn if your implementation fails - you can ignore those lines
+    # Ensurance to get the correct confusion matrix
     tn_sk, fp_sk, fn_sk, tp_sk = confusion_matrix(y, y_test_pred).ravel()
     if np.sum([np.abs(tp-tp_sk) + np.abs(tn-tn_sk) + np.abs(fp-fp_sk) + np.abs(fn-fn_sk)]) >0:
-        print('OWN confusion matrix failed!!! Reverting to sklearn.')
+        print(' Confusion matrix failed. ')
         tn = tn_sk
         tp = tp_sk
         fn = fn_sk
         fp = fp_sk
     else:
-        print(':) Successfully implemented the confusion matrix!')
+        print(' Confusion matrix implementation succeded. ')
 
-    # Calculate the evaluation metrics
+    # Calculate evaluation metrics
     precision   = tp / (tp + fp)
     specificity = tn / (tn + fp)
     accuracy    = (tp + tn) / (tp + fp + tn + fn)
     recall      = tp / (tp + fn)
     f1          = tp/(tp + 0.5*(fp+fn))
 
-    # Get the roc curve using a sklearn function
+    # Get the roc curve
     y_test_predict_proba  = clf.predict_proba(X)[:, 1]
     fp_rates, tp_rates, _ = roc_curve(y, y_test_predict_proba)
 
-    # Calculate the area under the roc curve using a sklearn function
+    # Calculate the area under the roc curve (with auc)
     roc_auc = auc(fp_rates, tp_rates)
 
     # Plot on the provided axis
-    ax.plot(fp_rates, tp_rates,label = legend_entry)
-
+    ax.step(fp_rates, tp_rates, where='post', label=legend_entry + ' (AUC = {:.2f})'.format(roc_auc))
 
     return [accuracy, precision, recall, specificity, f1, roc_auc]
 
-#Import data
-#data = pd.read_csv("./data/heart_2020_cleaned.csv")
+def performace_metrics (X,y,imagename_roc_curve,filename_table_metrics, imagename_importance_normalized_coefficient_LR, imagename_importance_normalized_coefficient_RF, filename_table_with_coefficients_LR, filename_table_with_coefficients_RF , filename_table_with_performance):
 
-data_encoded['HeartDisease'] = data_encoded['HeartDisease'].replace({'Yes': 1, 'No': 0}) #-> already converted into boolean BUT (True/Fasle)
-X  = data_encoded.copy().drop('HeartDisease', axis = 1)
+    data_encoded_performance = pd.DataFrame(columns = ['fold','clf','accuracy','precision','recall','specificity','F1','roc_auc']) # Prepare performance overview data frame
+    data_encoded_LR_normcoef = pd.DataFrame(index = X.columns, columns = np.arange(n_splits)) 
+    data_encoded_RF_normcoef = pd.DataFrame(index = X.columns, columns = np.arange(n_splits))
+
+
+    fold = 0
+    fig,axs = plt.subplots(1,2, figsize=(9, 4)) # with KNN: fig,axs = plt.subplots(1,3, figsize=(9, 4))
+
+    for train_index, test_index in skf.split(X, y): 
+
+        # subsets for training and testing
+        X_test  = X.iloc[test_index]
+        y_test  = y.iloc[test_index]
+        X_train = X.iloc[train_index]
+        y_train = y.iloc[train_index]
+
+        # Standardize numerical features (with training set statistics)
+        sc = StandardScaler()
+        X_train_sc = sc.fit_transform(X_train)
+        X_test_sc  = sc.transform(X_test)
+
+        # Logistic regression
+        LR_clf = LogisticRegression(random_state=1)
+        LR_clf.fit(X_train_sc, y_train)
+
+        # Random forest
+        RF_clf = RandomForestClassifier(random_state=1)
+        RF_clf.fit(X_train_sc, y_train)
+
+    
+        #KNN ????
+
+        # Get all features that contribute to classification
+        data_encoded_this_LR_coefs = pd.DataFrame(zip(X_train.columns, np.transpose(LR_clf.coef_[0])), columns=['features', 'coef'])
+        data_encoded_LR_normcoef.isetitem(fold, data_encoded_this_LR_coefs['coef'].values / data_encoded_this_LR_coefs['coef'].abs().sum())
+        #data_encoded_this_RF_coefs = pd.DataFrame(zip(X_train.columns, np.transpose(RF_clf.coef_[0])), columns=['features', 'coef'])
+        #data_encoded_RF_normcoef.isetitem(fold, data_encoded_this_RF_coefs['coef'].values / data_encoded_this_RF_coefs['coef'].abs().sum())
+
+        feature_importances_RF = pd.DataFrame(zip(X_train.columns, RF_clf.feature_importances_), columns=['features', 'importance'])
+        #data_encoded_RF_normcoef.iloc[:, fold] = feature_importances_RF['importance'] / feature_importances_RF['importance'].abs().sum()
+        data_encoded_RF_normcoef.isetitem(fold, feature_importances_RF['importance'].values / feature_importances_RF['importance'].abs().sum())
+
+
+
+        # Evaluate the classifiers Logistic Regression, Random Forest and K Nearest Neighbour
+        eval_metrics_LR = evaluation_metrics(LR_clf, y_test, X_test_sc, axs[0], legend_entry=str(fold)) # Logistic Regression 
+        data_encoded_performance.loc[len(data_encoded_performance)-1,:] = [fold,'LR']+eval_metrics_LR
+        eval_metrics_RF = evaluation_metrics(RF_clf, y_test, X_test_sc, axs[1], legend_entry=str(fold)) # Random Forest 
+        data_encoded_performance.loc[len(data_encoded_performance)-1, :] = [fold, 'RF'] + eval_metrics_RF
+        # K Nearest Neighbour 
+
+        # increase counter for folds
+        fold += 1
+
+    # make roc curve    
+    model_names = ['Logistic Regresssion (LR)', 'Random Forest (RF)'] #add KNN
+    for i, ax in enumerate(axs):
+        ax.set_xlabel('False positive rate (FPR)')
+        ax.set_ylabel('True Positive Rate (TPR)')
+        ax.plot([0, 1], [0, 1], color='r', linestyle='--', label='random\nclassifier')
+        ax.set_title(model_names[i])
+        ax.legend(title='Fold',loc='lower right')
+        ax.grid(True)
+    plt.tight_layout()
+    plt.savefig(imagename_roc_curve)
+
+
+    #group performance metrics by classifier type
+    df_by_clf = data_encoded_performance.groupby('clf')
+
+    #table with mean and standard deviation for each metric and classifier type
+    mean_acc = df_by_clf['accuracy'].mean() # accuracy
+    std_acc = df_by_clf['accuracy'].std()
+    mean_prec = df_by_clf['precision'].mean() #precision 
+    std_prec = df_by_clf['precision'].std()
+    mean_recall = df_by_clf['recall'].mean() #recall
+    std_recall = df_by_clf['recall'].std()
+    mean_spec = df_by_clf['specificity'].mean() #specificity
+    std_spec = df_by_clf['specificity'].std()
+    mean_F1 = df_by_clf['F1'].mean() #F1
+    std_F1 = df_by_clf['F1'].std()
+    mean_roc_auc = df_by_clf['roc_auc'].mean() #roc_auc
+    std_roc_auc = df_by_clf['roc_auc'].std()
+
+    table_data = {'Classifier': ['Logistic Regression', 'Random Forest'],
+                'Accuracy (mean ± std)': [f"{mean_acc['LR']:.3f} ± {std_acc['LR']:.3f}", f"{mean_acc['RF']:.3f} ± {std_acc['RF']:.3f}"],
+                'Precision (mean ± std)': [f"{mean_prec['LR']:.3f} ± {std_prec['LR']:.3f}", f"{mean_prec['RF']:.3f} ± {std_prec['RF']:.3f}"],
+                'Recall (mean ± std)': [f"{mean_recall['LR']:.3f} ± {std_recall['LR']:.3f}", f"{mean_recall['RF']:.3f} ± {std_recall['RF']:.3f}"],
+                'Specificity (mean ± std)': [f"{mean_spec['LR']:.3f} ± {std_spec['LR']:.3f}", f"{mean_spec['RF']:.3f} ± {std_spec['RF']:.3f}"],
+                'F1 score (mean ± std)': [f"{mean_F1['LR']:.3f} ± {std_F1['LR']:.3f}", f"{mean_F1['RF']:.3f} ± {std_F1['RF']:.3f}"],
+                'ROC AUC score (mean ± std)': [f"{mean_roc_auc['LR']:.3f} ± {std_roc_auc['LR']:.3f}", f"{mean_roc_auc['RF']:.3f} ± {std_roc_auc['RF']:.3f}"]}
+
+    table = pd.DataFrame(table_data)
+    table.to_csv(filename_table_metrics, index=False)
+
+    # get top features (coefficients across five folds) and visualization
+    data_encoded_LR_normcoef['importance_mean'] = data_encoded_LR_normcoef.mean(axis =1)
+    data_encoded_LR_normcoef['importance_std']  = data_encoded_LR_normcoef.std(axis =1)
+    data_encoded_LR_normcoef['importance_abs_mean'] = data_encoded_LR_normcoef.abs().mean(axis =1)
+    data_encoded_LR_normcoef.sort_values('importance_abs_mean', inplace = True, ascending=False)
+
+    data_encoded_LR_normcoef['mean'] = data_encoded_LR_normcoef.mean(axis=1) #mean of normalized coefficients 
+    data_encoded_LR_normcoef_sorted = data_encoded_LR_normcoef.sort_values(by='mean', ascending=False) # sort coefficients by mean 
+
+    fig, ax = plt.subplots(figsize=(8,6)) # visualization of each feature by normalized coefficient
+    data_encoded_LR_normcoef_sorted.plot(kind='bar', y='mean', yerr=data_encoded_LR_normcoef_sorted.std(axis=1), legend=False, ax=ax) # give the values in the plot
+    ax.set_title(' Feature importance of different classification models ') # Logistic Regression, Random Forest, K Nearest Neigbour Importance
+    ax.set_xlabel('Features')
+    ax.set_ylabel('Normalized Coefficient')
+    plt.tight_layout()
+    plt.savefig(imagename_importance_normalized_coefficient_LR)
+
+
+        # get top features (coefficients across five folds) and visualization
+    data_encoded_RF_normcoef['importance_mean'] = data_encoded_RF_normcoef.mean(axis =1)
+    data_encoded_RF_normcoef['importance_std']  = data_encoded_RF_normcoef.std(axis =1)
+    data_encoded_RF_normcoef['importance_abs_mean'] = data_encoded_RF_normcoef.abs().mean(axis =1)
+    data_encoded_RF_normcoef.sort_values('importance_abs_mean', inplace = True, ascending=False)
+
+    data_encoded_RF_normcoef['mean'] = data_encoded_RF_normcoef.mean(axis=1) #mean of normalized coefficients 
+    data_encoded_RF_normcoef_sorted = data_encoded_RF_normcoef.sort_values(by='mean', ascending=False) # sort coefficients by mean 
+
+    fig, ax = plt.subplots(figsize=(8,6)) # visualization of each feature by normalized coefficient
+    data_encoded_RF_normcoef_sorted.plot(kind='bar', y='mean', yerr=data_encoded_RF_normcoef_sorted.std(axis=1), legend=False, ax=ax) # give the values in the plot
+    ax.set_title(' Feature importance of different classification models ') # Logistic Regression, Random Forest, K Nearest Neigbour Importance
+    ax.set_xlabel('Features')
+    ax.set_ylabel('Normalized Coefficient')
+    plt.tight_layout()
+    plt.savefig(imagename_importance_normalized_coefficient_RF)
+
+
+    #sort the coefficients/feature importance (not normalized) to later add those to a table
+    '''coefficients_LR = pd.DataFrame(zip(X_train.columns, np.transpose(LR_clf.coef_[0])), columns=['features', 'coef']) # using a table to visualize the coefficients'''
+    data_encoded_this_LR_coefs = data_encoded_this_LR_coefs.sort_values(by='coef', ascending=False) 
+    data_encoded_this_LR_coefs.to_csv(filename_table_with_coefficients_LR, index=False)
+    
+    '''
+    coefficients_RF = pd.DataFrame(zip(X_train.columns, np.transpose(RF_clf.coef_[0])), columns=['features', 'coef']) # using a table to visualize the coefficients
+    coefficients_RF = coefficients_RF.sort_values(by='coef', ascending=False)
+    '''
+    '''feature_importances = RF_clf.feature_importances_
+    #coefficients_RF = pd.DataFrame({'features': X_train.columns, 'importance': feature_importances})'''
+
+    # sort the feature importance for RF
+    feature_importances_RF = feature_importances_RF.sort_values(by='importance', ascending=False)
+    # save performance table to csv
+    feature_importances_RF.to_csv(filename_table_with_coefficients_RF, index=False)
+
+    # save performance table to csv
+    data_encoded_performance.to_csv(filename_table_with_performance, index=False)
+
+''' definining x und y for the following machine learnings '''
+data_encoded['HeartDisease'] = data_encoded['HeartDisease'].replace({'Yes': 1, 'No': 0}) # already converted into boolean BUT (True/Fasle)
+X  = data_encoded.copy().drop('HeartDisease', axis = 1) # without feature selection
+X_features_selected = data_encoded.copy().drop(['HeartDisease', 'MentalHealth', 'AlcoholDrinking_No', 'AlcoholDrinking_Yes', 'Sex_Female', 'Sex_Male', 'Race_American Indian/Alaskan Native', 'Race_Asian', 'Race_Black', 'Race_Hispanic', 'Race_Other', 'Race_White', 'Asthma_No', 'Asthma_Yes'], axis = 1) # with feature selection
 y  = data_encoded['HeartDisease']
 
-#print(X)
-#print(y)
+''' prepare the splits (perform a 5-fold crossvalidation)'''
+n_splits = 5 # number of folds
+skf = StratifiedKFold(n_splits=n_splits)
 
-
-# Perform a 5-fold crossvalidation - prepare the splits
-n_splits = 5
-skf      = StratifiedKFold(n_splits=n_splits)
-
-
-# Prepare the performance overview data frame
-data_encoded_performance = pd.DataFrame(columns = ['fold','clf','accuracy','precision','recall','specificity','F1','roc_auc'])
-data_encoded_LR_normcoef = pd.DataFrame(index = X.columns, columns = np.arange(n_splits))
-
-# Use this counter to save your performance metrics for each crossvalidation fold
-# also plot the roc curve for each model and fold into a joint subplot
-fold = 0
-fig,axs = plt.subplots(1,2, figsize=(9, 4))
-# with KNN: fig,axs = plt.subplots(1,3, figsize=(9, 4))
-
-
-
-# Loop over all splits
-for train_index, test_index in skf.split(X, y):
-
-    # Get the relevant subsets for training and testing
-    X_test  = X.iloc[test_index]
-    y_test  = y.iloc[test_index]
-    X_train = X.iloc[train_index]
-    y_train = y.iloc[train_index]
-
-    #print('X_test', X_test, 'y_test', y_test, 'X_train', X_train, 'y_train', y_train)
-    
-
-    # Standardize the numerical features using training set statistics
-    sc = StandardScaler()
-    X_train_sc = sc.fit_transform(X_train)
-    X_test_sc  = sc.transform(X_test)
-
-    #print('X_train_sc', X_train_sc)
-    #print('X_test_sc', X_test_sc)
-
-    # Creat prediction models and fit them to the training data
-
-    # Logistic regression
-    LR_clf = LogisticRegression(random_state=1)
-    LR_clf.fit(X_train_sc, y_train)
-
-    #print('LR_clf', clf)
-
-
-    # Get the top 5 features that contribute most to the classification
-    data_encoded_this_LR_coefs = pd.DataFrame(zip(X_train.columns, np.transpose(LR_clf.coef_[0])), columns=['features', 'coef'])
-    data_encoded_LR_normcoef[data_encoded_this_LR_coefs['features']] = data_encoded_this_LR_coefs['coef'].values / data_encoded_this_LR_coefs['coef'].abs().sum()
-    #data_encoded_LR_normcoef.loc[:,fold] = data_encoded_this_LR_coefs['coef'].values/data_encoded_this_LR_coefs['coef'].abs().sum()
-    #data_encoded_this_LR_coefs = pd.DataFrame(zip(X_train.columns, np.transpose(clf.coef_)), columns=['features', 'coef'])
-    #data_encoded_LR_normcoef.loc[:,fold] = data_encoded_this_LR_coefs['coef'].values
-
-
-
-    #print('top 5 features', data_encoded_this_LR_coefs, data_encoded_LR_normcoef)
-
-    # Random forest
-    RF_clf = RandomForestClassifier(random_state=1)
-    RF_clf.fit(X_train_sc, y_train)
-
-    #print('RF_clf', RF_clf)
-
- 
-    #KNN = 
-
-
-
-
-
-
-
-
-    # Evaluate the classifiers Logistic Regression, Random Forest and KNN
-    eval_metrics = evaluation_metrics(LR_clf, y_test, X_test_sc, axs[0], legend_entry=str(fold))
-    data_encoded_performance.loc[len(data_encoded_performance)-1,:] = [fold,'LR']+eval_metrics
-
-    eval_metrics_RF = evaluation_metrics(RF_clf, y_test, X_test_sc, axs[1], legend_entry=str(fold))
-    data_encoded_performance.loc[len(data_encoded_performance)-1, :] = [fold, 'RF'] + eval_metrics_RF
-
-    print('eval metrics LR', eval_metrics)
-    
-    print('eval metrics RF', eval_metrics_RF)
-
-    '''
-    eval_metrics_KNN = evaluation_metrics(KNN_clf, y_test, X_test_sc, axs[2], legend_entry=str(fold))
-    data_encoded_performance.loc[len(data_encoded_performance)-1, :] = [fold, 'RF'] + eval_metrics_RF
-    '''
-
-    # increase counter for folds
-    fold += 1
-
-''''
-    print(data_encoded_performance.loc[len(data_encoded_performance)-1,:])
-    print(data_encoded_performance.loc[len(data_encoded_performance)-1, :])
-'''
-
-model_names = ['LR','RF'] #add 'KNN'
-for i,ax in enumerate(axs):
-    ax.set_xlabel('FPR')
-    ax.set_ylabel('TPR')
-    add_identity(ax, color="r", ls="--",label = 'random\nclassifier')
-    ax.legend()
-    ax.title.set_text(model_names[i])
-plt.tight_layout()
-plt.savefig('./output/roc_curves.png')
-
-
-# Summarize the folds
-print(data_encoded_performance.groupby(by = 'LR_clf').mean())
-print(data_encoded_performance.groupby(by = 'LR_clf').std())
-
-
-# Get the top features - evaluate the coefficients across the five folds
-data_encoded_LR_normcoef['importance_mean'] = data_encoded_LR_normcoef.mean(axis =1)
-data_encoded_LR_normcoef['importance_std']  = data_encoded_LR_normcoef.std(axis =1)
-data_encoded_LR_normcoef['importance_abs_mean'] = data_encoded_LR_normcoef.abs().mean(axis =1)
-data_encoded_LR_normcoef.sort_values('importance_abs_mean', inplace = True, ascending=False)
-
-# Visualize the normalized feature importance across the five folds and add error bar to indicate the std
-fig, ax = plt.subplots(figsize=(9, 6))
-ax.bar(np.arange(15), data_encoded_LR_normcoef['importance_abs_mean'][:15], yerr=data_encoded_LR_normcoef['importance_std'][:15])
-#ax.set_xticklabels(data_encoded_LR_normcoef.index.tolist()[:15], rotation=90)
-ax.set_xticks(np.arange(15), data_encoded_LR_normcoef.index.tolist()[:15], rotation=90)
-ax.set_title("Normalized feature importance for LR across 5 folds", fontsize=20)
-plt.xlabel('Features', fontsize=16)
-plt.ylabel("Normalized feature importance", fontsize=16)
-plt.tight_layout()
-plt.savefig('./output/importance.png')
-
-# Get the two most important features and the relevant sign:
-data_encoded_LR_normcoef.index[:2]
-data_encoded_LR_normcoef['importance_mean'][:2]
-
-
-print ("****************** Zusatz Annika ***************************")
-# Get the coefficients for all features
-coefficients = pd.DataFrame(zip(X_train.columns, np.transpose(LR_clf.coef_[0])), columns=['features', 'coef'])
-coefficients = coefficients.sort_values(by='coef', ascending=False)
-
-# Print all features and their coefficients
-print(coefficients)
-coefficients.to_csv('./output/table_with_coefficients.csv', index=False)
-'''
-positive Koeffizienten: höheres Risiko für Herzkrankheiten
-- Alterskategorien: höchsten positiven Koeffizienten --> höheres Alter = erhöhtes Risiko für Herzkrankheiten verbunden (Koeffizienten nehmen mit steigendem Alter ab --> Risiko mit höherem Alter nimmt geringfügig ab)
-- Allgemeine Gesundheit (GenHealth) --> Kategorien "Good" und "Fair" einen höheren Einfluss haben als "Poor" und "Very good" --> schlechtere allgemeine Gesundheit = höheres Risiko für Herzkrankheiten 
-- Geschlecht (Sex_Male) --> Männer haben ein etwas höheres Risiko für Herzkrankheiten als Frauen
-- Schlaganfall (Stroke_Yes), Rauchen (Smoking_Yes), Diabetes (Diabetic_Yes), Nierenerkrankungen (KidneyDisease_Yes) und Asthma (Asthma_Yes) --> erhöhtes Risiko für Herzkrankheiten 
-- BMI, geistige Gesundheit (MentalHealth), körperliche Gesundheit (PhysicalHealth) geringere positive Koeffizienten --> geringeren Einfluss auf das Herzkrankheitsrisiko 
-Negative Koeffizeinten: geringeren Risiko für Herzkrankheiten 
-- Rassenzugehörigkeit (Race)  
-- Hautkrebs (SkinCancer_Yes) 
-'''
-data_encoded_performance.to_csv('./output/table_with_performance.csv', index=False)
-'''
-- Accuracy: Prozentsatz der korrekt vorhergesagten Werte insgesamt --> LR-Classifier durchschnittliche Accuracy über die Folds: 0.916, RF-Classifier: 0.905 l --> LR-Classifier weist tendenziell eine etwas höhere Gesamtgenauigkeit auf
-- Precision: Anteil der korrekt positiv vorhergesagten Werte (true positives) unter allen positiven Vorhersagen --> LR-Classifier durchschnittliche Precision: 0.544, RF-Classifier: 0.341 aufweist --> LR-Classifier tendenziell eine bessere Fähigkeit hat, echte positive Fälle zu identifizieren
-- Recall (Sensitivität): Anteil der korrekt positiv vorhergesagten Werte (true positives) unter allen tatsächlich positiven Fällen --> LR-Classifier: 0.107, RF-Classifier: 0.120 --> RF-Classifier hat tendenziell eine etwas bessere Fähigkeit hat, tatsächlich positive Fälle zu erkennen
-- Specificity: Anteil der korrekt negativ vorhergesagten Werte (true negatives) unter allen tatsächlich negativen Fällen an --> LR-Classifier: 0.992, RF-Classifier: 0.978 --> LR-Classifier hat eine höhere Fähigkeit, echte negative Fälle zu identifizieren
-- F1-Score: harmonische Mittel aus Precision und Recall und gibt einen kombinierten Maßstab für die Modellleistung --> LR-Classifier durchschnittlicher F1-Score: 0.178, RF-Classifier: 0.178 --> ähnliche F1-Scores
-- ROC-AUC: Fähigkeit des Modells beschreibt, zwischen positiven und negativen Fällen zu unterscheiden --> LR-Classifier durchschnittliche ROC-AUC: 0.840, RF-Classifier: 0.787 --> LR-Classifier tendenziell eine bessere Fähigkeit, zwischen positiven und negativen Fällen zu unterscheiden
-'''
-
-
-
-
-
-
-
+performace_metrics (X,y,'./output/LR_RF_KNN/roc_curve/without_features_selection','./output/LR_RF_KNN/table_metrics/without_features_selection.csv', './output/LR_RF_KNN/importance_normalized_coefficient/LR_without_features_selection', './output/LR_RF_KNN/importance_normalized_coefficient/RF_without_features_selection', './output/LR_RF_KNN/table_with_coefficients/LR_without_features_selection.csv',  './output/LR_RF_KNN/table_with_coefficients/RF_without_features_selection.csv',  './output/LR_RF_KNN/table_with_performance/without_features_selection.csv')
+performace_metrics (X_features_selected,y,'./output/LR_RF_KNN/roc_curve/with_features_selection','./output/LR_RF_KNN/table_metrics/with_features_selection.csv', './output/LR_RF_KNN/importance_normalized_coefficient/LR_with_features_selection', './output/LR_RF_KNN/importance_normalized_coefficient/RF_with_features_selection', './output/LR_RF_KNN/table_with_coefficients/LR_with_features_selection.csv', './output/LR_RF_KNN/table_with_coefficients/RF_with_features_selection.csv', './output/LR_RF_KNN/table_with_performance/with_features_selection.csv')
