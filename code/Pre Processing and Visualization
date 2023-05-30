@@ -196,7 +196,7 @@ for col in num_cols:
 
 ###Visualization of data balance" Bar plot (Boolean data)
 color = 'steelblue'
-
+'''
 ##Create subplots without HD
 fig, axs = plt.subplots(2, 2, figsize=(12, 16))
 fig.subplots_adjust(hspace=0.5, wspace=0.3)
@@ -227,7 +227,7 @@ plt.tight_layout()
 sns.countplot(data=data, x="DiffWalking", color=color, dodge=False, ax=axs[3])
 axs[3].set_xticklabels(axs[3].get_xticklabels(), rotation=45, ha='right')
 axs[3].legend([], [], frameon=False)
-axs[3].set_title('Diff Walking')
+axs[3].set_title('Difficulty Walking')
 plt.tight_layout()
 
 plt.tight_layout
@@ -235,39 +235,112 @@ plt.savefig('../output/boolean_subplots_without.jpg')
 plt.show()
 
 
+fig, axs = plt.subplots(2, 2, figsize=(12, 16))
+fig.subplots_adjust(hspace=0.5, wspace=0.3)
+axs = axs.flatten()
+
+#Sex without HD
+sns.countplot(data=data, x="Sex", color=color, dodge=False, ax=axs[0])
+axs[0].set_xticklabels(axs[0].get_xticklabels(), rotation=45, ha='right')
+axs[0].legend([], [], frameon=False)
+axs[0].set_title('Sex')
+plt.tight_layout()
+
+#Asthma without HD
+sns.countplot(data=data, x="Asthma", color=color, dodge=False, ax=axs[1])
+axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=45, ha='right')
+axs[1].legend([], [], frameon=False)
+axs[1].set_title('Asthma')
+plt.tight_layout()
+
+#Kidney Disease without HD
+sns.countplot(data=data, x="KidneyDisease", color=color, dodge=False, ax=axs[2])
+axs[2].set_xticklabels(axs[2].get_xticklabels(), rotation=45, ha='right')
+axs[2].legend([], [], frameon=False)
+axs[2].set_title('Kidney Disease')
+plt.tight_layout()
+
+#Skin Cancer without HD
+sns.countplot(data=data, x="SkinCancer", color=color, dodge=False, ax=axs[3])
+axs[3].set_xticklabels(axs[3].get_xticklabels(), rotation=45, ha='right')
+axs[3].legend([], [], frameon=False)
+axs[3].set_title('Skin Cancer')
+plt.tight_layout()
+
+plt.tight_layout
+plt.savefig('../output/boolean_subplots_without_2.jpg')
+plt.show()
+'''
+
 ##Create subplots with HD
 fig, axs = plt.subplots(2, 2, figsize=(12, 16))
 fig.subplots_adjust(hspace=0.5, wspace=0.3)
 axs = axs.flatten()
 
 #Smoking with HD
-sns.countplot(data=data, x="Smoking", hue='HeartDisease', dodge=False, ax=axs[0])
+sns.countplot(data=data, x="Smoking", hue='HeartDisease', dodge=True, ax=axs[0])
 axs[0].set_xticklabels(axs[0].get_xticklabels(), rotation=45, ha='right')
 axs[0].set_title('Smoking with Heart Disease')
 plt.tight_layout()
 
 #AlcoholDrinking with HD
-sns.countplot(data=data, x="AlcoholDrinking", hue='HeartDisease', dodge=False, ax=axs[1])
+sns.countplot(data=data, x="AlcoholDrinking", hue='HeartDisease', dodge=True, ax=axs[1])
 axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=45, ha='right')
 axs[1].set_title('Alcohol Drinking with Heart Disease')
 plt.tight_layout()
 
 #Stroke with HD
-sns.countplot(data=data, x="Stroke", hue='HeartDisease', dodge=False, ax=axs[2])
+sns.countplot(data=data, x="Stroke", hue='HeartDisease', dodge=True, ax=axs[2])
 axs[2].set_xticklabels(axs[2].get_xticklabels(), rotation=45, ha='right')
 axs[2].set_title('Stroke with Heart Disease')
 plt.tight_layout()
 
 #DiffWalking with HD
-sns.countplot(data=data, x="DiffWalking", hue='HeartDisease', dodge=False, ax=axs[3])
+sns.countplot(data=data, x="DiffWalking", hue='HeartDisease', dodge=True, ax=axs[3])
 axs[3].set_xticklabels(axs[3].get_xticklabels(), rotation=45, ha='right')
-axs[3].set_title('Diff Walking with Heart Disease')
+axs[3].set_title('Difficulty Walking with Heart Disease')
 plt.tight_layout()
 
 plt.tight_layout
 plt.savefig('../output/boolean_subplots_with.jpg')
 plt.show()
 
+
+fig, axs = plt.subplots(2, 2, figsize=(12, 16))
+fig.subplots_adjust(hspace=0.5, wspace=0.3)
+axs = axs.flatten()
+
+#Sex with HD
+sns.countplot(data=data, x="Sex", hue='HeartDisease', dodge=True, ax=axs[0])
+axs[0].set_xticklabels(axs[0].get_xticklabels(), rotation=45, ha='right')
+axs[0].legend([], [], frameon=False)
+axs[0].set_title('Sex')
+plt.tight_layout()
+
+#Asthma with HD
+sns.countplot(data=data, x="Asthma", hue='HeartDisease', dodge=True, ax=axs[1])
+axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=45, ha='right')
+axs[1].legend([], [], frameon=False)
+axs[1].set_title('Asthma')
+plt.tight_layout()
+
+#Kidney Disease with HD
+sns.countplot(data=data, x="KidneyDisease", hue='HeartDisease', dodge=True, ax=axs[2])
+axs[2].set_xticklabels(axs[2].get_xticklabels(), rotation=45, ha='right')
+axs[2].legend([], [], frameon=False)
+axs[2].set_title('Kidney Disease')
+plt.tight_layout()
+
+#Skin Cancer with HD
+sns.countplot(data=data, x="SkinCancer", hue='HeartDisease', dodge=True, ax=axs[3])
+axs[3].set_xticklabels(axs[3].get_xticklabels(), rotation=45, ha='right')
+axs[3].legend([], [], frameon=False)
+axs[3].set_title('Skin Cancer')
+plt.tight_layout()
+
+plt.tight_layout
+plt.savefig('../output/boolean_subplots_with_2.jpg')
+plt.show()
 ###Single plots
 
 #Visualization of BMI
@@ -368,7 +441,7 @@ plt.show()
 ###Visualization of data balance: Bar plot (categorical data) 
 #Subplots 
 color = 'steelblue'
-
+'''
 ## Create subplots without HD
 fig, axs = plt.subplots(2, 2, figsize=(12, 16))
 fig.subplots_adjust(hspace=0.5, wspace=0.3)
@@ -392,20 +465,21 @@ plt.tight_layout()
 sns.countplot(data=data, x="GenHealth", color=color, dodge=False, ax=axs[2])
 axs[2].set_xticklabels(axs[2].get_xticklabels(), rotation=45, ha='right')
 axs[2].legend([], [], frameon=False)
-axs[2].set_title('Stroke')
+axs[2].set_title('GenHealth')
 plt.tight_layout()
 
+
 #AgeCategory without HD
-sns.countplot(data=data, x="AgeCategory", color=color, dodge=False, ax=axs[3])
+sns.countplot(data=data, x="AgeCategory", order = age_categories, color=color, dodge=False, ax=axs[3])
 axs[3].set_xticklabels(axs[3].get_xticklabels(), rotation=45, ha='right')
 axs[3].legend([], [], frameon=False)
-axs[3].set_title('Diff Walking')
+axs[3].set_title('Age Category')
 plt.tight_layout()
 
 plt.tight_layout
 plt.savefig('../output/Categorical_subplots_without.jpg')
 plt.show()
-
+'''
 
 ##Create subplots with HD
 fig, axs = plt.subplots(2, 2, figsize=(12, 16))
@@ -413,25 +487,25 @@ fig.subplots_adjust(hspace=0.5, wspace=0.3)
 axs = axs.flatten()
 
 #Race with HD
-sns.countplot(data=data, x="Race", hue='HeartDisease', dodge=False, ax=axs[0])
+sns.countplot(data=data, x="Race", hue='HeartDisease', dodge=True, ax=axs[0])
 axs[0].set_xticklabels(axs[0].get_xticklabels(), rotation=45, ha='right')
 axs[0].set_title('Race with Heart Disease')
 plt.tight_layout()
 
 #Diabetic with HD
-sns.countplot(data=data, x="Diabetic", hue='HeartDisease', dodge=False, ax=axs[1])
+sns.countplot(data=data, x="Diabetic", hue='HeartDisease', dodge=True, ax=axs[1])
 axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=45, ha='right')
 axs[1].set_title('Diabetic with Heart Disease')
 plt.tight_layout()
 
 #GenHealth with HD
-sns.countplot(data=data, x="GenHealth", hue='HeartDisease', dodge=False, ax=axs[2])
+sns.countplot(data=data, x="GenHealth", hue='HeartDisease', dodge=True, ax=axs[2])
 axs[2].set_xticklabels(axs[2].get_xticklabels(), rotation=45, ha='right')
-axs[2].set_title('Stroke with Heart Disease')
+axs[2].set_title('General Health with Heart Disease')
 plt.tight_layout()
 
 #AgeCategory with HD
-sns.countplot(data=data, x="AgeCategory", hue='HeartDisease', dodge=False, ax=axs[3])
+sns.countplot(data=data, x="AgeCategory", order = age_categories, hue='HeartDisease', dodge=True, ax=axs[3])
 axs[3].set_xticklabels(axs[3].get_xticklabels(), rotation=45, ha='right')
 axs[3].set_title('AgeCategory with Heart Disease')
 plt.tight_layout()
@@ -439,6 +513,8 @@ plt.tight_layout()
 plt.tight_layout
 plt.savefig('../output/Categorical_subplots_with.jpg')
 plt.show()
+
+
 
 ##Single Plots 
 '''
