@@ -35,15 +35,29 @@ print("The dataset has ", data.shape[0], "rows ", data.shape[1], "columns and", 
 print("******************Description of the data***************************")
 print(data.describe())
 
+#divide BMI into 4 categories (with WHO recommendations)
+for i in range(len(data)):
+    if data.loc[i, 'BMI'] < 18.5:
+        data.loc[i, 'BMI'] = 'underweight'
+    elif 18.5 <= data.loc[i, 'BMI'] <= 24.9:
+        data.loc[i, 'BMI'] = 'normalweight'
+    elif 25 <= data.loc[i, 'BMI'] <= 29.9:
+        data.loc[i, 'BMI'] = 'overweight'
+    else:
+        data.loc[i, 'BMI'] = 'obesity'
+
+#Unique Values 
 for col in data.columns:
     unique_values = data[col].unique()
     unique_count = len(unique_values)
     print("Sum of unique values in", col, ":", unique_count)
 columns = data.columns.values.tolist() #list of all column names
 #print(columns)
+
 print("*******************Cleaning the data*******************")
 #data = data.drop(data[data['SleepTime'] > 20].index) #based on research, it is not possible to sleep more than 20 h per night
 print(data.isna().sum()) #no missing data
+
 print("*******************Data Type Inspection*******************")
 
 #inspect the data types
@@ -81,6 +95,7 @@ print(data.dtypes)
 print(data.head())
 
 
+
 print("*******************Numerical Data*******************")
 
 #check the data for normality in numerical data using the Shapiro-Wilk Test
@@ -91,24 +106,24 @@ for col in num_cols:
     #all p values are below 0.05 --> none of the data is normally distributed 
 
 
-'''
+
 #plot the numerical data distributions
-fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+fig, axs = plt.subplots(2, 1, figsize=(12, 10))
 
 print(num_cols)
 for i in range (len(num_cols)):
     row = i // 2 
     col = i % 2
     col_name = num_cols[i]
-    sns.histplot(data=data, x=col_name, ax=axs[row, col])
-    axs[row, col].set_xlabel(col_name)
-    axs[row, col].set_ylabel('Count')
-    axs[row, col].set_title(col_name + ' Distribution')
+    sns.histplot(data=data, x=col_name, ax=axs[row])
+    axs[row].set_xlabel(col_name)
+    axs[row].set_ylabel('Count')
+    axs[row].set_title(col_name + ' Distribution')
 #maybe rename the columns so that it is Mental Health and not MentalHealth
 plt.savefig('../output/numerical_distributions.jpg')
 plt.tight_layout()
 #plt.show()
-'''
+
 
 #categorical data
 print("*******************Categorical Data*******************")
@@ -121,7 +136,7 @@ fig_age.set_title("Age Distribution with Heart Disease")
 plt.tight_layout()
 #plt.show()
 
-'''
+
 #statistical tests for categorical variables (in the list cat_cols)
 #check what a good sample size is for the chi2 test
 print("*******************Statistical testing for categorical variables (Chi-squared)*******************")
@@ -177,7 +192,7 @@ for col in num_cols:
     else:
         print(f"Statistical correlation between {col} and Heart Disease (p={p:.4f}).")
 
-'''
+
 
 ###Visualization of data balance" Bar plot (Boolean data)
 color = 'steelblue'
@@ -254,6 +269,23 @@ plt.savefig('../output/boolean_subplots_with.jpg')
 plt.show()
 
 ###Single plots
+
+#Visualization of BMI
+plt.figure(figsize=(8, 6))
+sns.countplot(x=data['BMI'], color='steelblue')
+plt.xlabel('BMI')
+plt.ylabel('Count')
+plt.title('BMI')
+plt.savefig('../output/BMI.jpg')
+plt.show()
+
+plt.figure(figsize=(8, 6))
+sns.countplot(x='BMI', hue='HeartDisease', data=data, dodge=False)
+plt.xlabel('BMI')
+plt.ylabel('Count')
+plt.title('BMI with Heart Disease')
+plt.savefig('../output/BMI_with.jpg')
+plt.show()
 '''
 ##Smoking without HD
 fig_genhealth = sns.countplot(data, x="Smoking", color = 'steelblue', dodge=False)
@@ -470,7 +502,6 @@ plt.show()
 '''
 
 #Heatmap
-'''
 # #cat_vars = ['HeartDisease', 'AgeCategory', 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth']
 cat_vars = ['HeartDisease', 'BMI', 'Smoking', 'AlcoholDrinking', 'Stroke', 'PhysicalHealth', 'MentalHealth', 'DiffWalking', 'Sex', 'AgeCategory', 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth', 'Asthma', 'KidneyDisease', 'SkinCancer']
 # Create a contingency table for each pair of categorical variables
@@ -500,7 +531,7 @@ plt.yticks(rotation=0)
 plt.tight_layout()
 plt.savefig('../output/categorical_heatmap.jpg', dpi=300)
 plt.show()
-'''
+
 
 #perform one-hot encoding
 print("*******************One-Hot Encoding*******************")
@@ -519,46 +550,30 @@ print(X_encoded.head())
 print(y.head())
 
 
-##Spearman correlations  #! sample size 
+##Spearman correlations 
 print("*******************Pearson and Spearman correlations*******************")
-#Spearman correlation between (HeartDisease, BMI)  
-data_encoded_corr = pd.get_dummies(data, columns=cat_cols)
-data_encoded_corr['HeartDisease'] = data_encoded_corr['HeartDisease'].map({'No': 0, 'Yes': 1})
-data_encoded_corr['BMI'] = pd.to_numeric(data_encoded_corr['BMI'])
 
-print(data_encoded_corr.head())
+X_encoded_corr = pd.get_dummies(data, columns=cat_cols, drop_first=True)
+X_encoded_corr['HeartDisease'] = X_encoded_corr['HeartDisease'].replace({'True': 1, 'False': 0}).astype(int)
 
-print("Correlation between Heart Disease and BMI:")
-print(
-    f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI']).correlation:.3f}"
-    + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['BMI']).pvalue:.10f}"
-)
+y = X_encoded_corr['HeartDisease']
+X_encoded_corr = X_encoded_corr.drop('HeartDisease', axis=1)
 
-#Spearman correlation between (HeartDisease, PhysicalHealth)  
-data_encoded_corr['PhysicalHealth'] = pd.to_numeric(data_encoded_corr['PhysicalHealth'])
+# Spearman correlation between 'HeartDisease' and Factor
+correlations = {}
 
-print("Correlation between Heart Disease and Physical Health:")
-print(
-    f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['PhysicalHealth']).correlation:.3f}"
-    + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['PhysicalHealth']).pvalue:.10f}"
-)
+if 'BMI' in X_encoded_corr:
+    correlations['BMI'] = sts.spearmanr(X_encoded_corr['BMI'], y)
+if 'PhysicalHealth' in X_encoded_corr:
+    correlations['PhysicalHealth'] = sts.spearmanr(X_encoded_corr['PhysicalHealth'], y)
+if 'MentalHealth' in X_encoded_corr:
+    correlations['MentalHealth'] = sts.spearmanr(X_encoded_corr['MentalHealth'], y)
+# if 'SleepTime' in X_encoded_corr:
+#     correlations['SleepTime'] = sts.spearmanr(X_encoded_corr['SleepTime'], y)
 
-#Spearman correlation between (HeartDisease, MentalHealth)
-data_encoded_corr['MentalHealth'] = pd.to_numeric(data_encoded_corr['MentalHealth'])
-
-print("Correlation between Heart Disease and Mental Health:")
-print(
-    f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['MentalHealth']).correlation:.3f}"
-    + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['MentalHealth']).pvalue:.10f}"
-)
-
-'''
-#Spearman correlation between (HeartDisease, SleepTime)
-data_encoded_corr['SleepTime'] = pd.to_numeric(data_encoded_corr['SleepTime'])
-
-print("Correlation between Heart Disease and Sleep Time:")
-print(
-    f"\t Spearman: {sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['SleepTime']).correlation:.3f}"
-    + f" | p={sts.spearmanr(data_encoded_corr['HeartDisease'], data_encoded_corr['SleepTime']).pvalue:.10f}"
-)
-'''
+# Print correlation results
+print("Correlations between Heart Disease and Features:")
+for feature, correlation in correlations.items():
+    print(f"\t{feature}:")
+    print(f"\t\tSpearman correlation: {correlation.correlation:.3f}")
+    print(f"\t\tp-value: {correlation.pvalue:.10f}")
