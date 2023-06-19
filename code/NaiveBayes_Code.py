@@ -10,7 +10,7 @@ from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import StratifiedKFold
 
 # Load and Prepare the Data
-data = pd.read_csv('../GroupProject/cleaned_data.csv')
+data = pd.read_csv("../data/heart_2020_cleaned.csv")
 
 # Drop rows with missing values
 data.dropna(inplace=True)
